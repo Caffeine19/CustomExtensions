@@ -5,7 +5,6 @@
   "description": "Control the macOS pointer size and color in Raycast.",
   "icon": "extension-icon-v2.png",
   "author": "CaffeineCat",
-  "owner": "caffeinecat26",
   "license": "MIT",
   "commands": [
     {

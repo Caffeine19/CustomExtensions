@@ -5,7 +5,6 @@
   "description": "Raycast Extension for Zentao",
   "icon": "extension-icon-v2.png",
   "author": "CaffeineCat",
-  "owner": "caffeinecat26",
   "license": "MIT",
   "type": "module",
   "commands": [

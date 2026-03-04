@@ -5,7 +5,6 @@
   "description": "Control macOS Screen Mirroring from Raycast. Discover available displays and toggle screen mirroring on/off with ease.",
   "icon": "extension-icon-v3.png",
   "author": "CaffeineCat",
-  "owner": "caffeinecat26",
   "license": "MIT",
   "commands": [
     {

@@ -1,6 +1,13 @@
 import { create } from "zustand";
 import { Space, Window } from "../types/space";
-import { listSpace, getSpaceWindows, removeSpaceById, gotoSpace, getAllWindows, focusWindow } from "../utils/space";
+import {
+  listSpace,
+  getSpaceWindows,
+  removeSpaceById,
+  gotoSpace,
+  getAllWindows,
+  focusWindow,
+} from "../utils/space";
 import { tryit, sleep } from "radash";
 import { showFailureToast } from "@raycast/utils";
 import { getApplications } from "@raycast/api";
@@ -108,7 +115,9 @@ export const useSpaceStore = create<SpaceStore>((set, get) => ({
     const { spaceWindows, loadingWindows, appIcons } = get();
 
     if (spaceWindows[spaceId] || loadingWindows[spaceId]) {
-      console.log("🚀 ~ fetchSpaceWindows ~ skipping, already loaded or loading");
+      console.log(
+        "🚀 ~ fetchSpaceWindows ~ skipping, already loaded or loading",
+      );
       return;
     }
 
@@ -139,7 +148,9 @@ export const useSpaceStore = create<SpaceStore>((set, get) => ({
     }));
 
     // Fetch application icons for new applications
-    const newAppNames = windows.map((window) => window.application).filter((appName) => !appIcons[appName]);
+    const newAppNames = windows
+      .map((window) => window.application)
+      .filter((appName) => !appIcons[appName]);
 
     if (newAppNames.length > 0) {
       get().fetchApplicationIcons(newAppNames);
@@ -186,7 +197,9 @@ export const useSpaceStore = create<SpaceStore>((set, get) => ({
     }
 
     // Find the target space to get its screen
-    const targetSpace = get().spaces.find((space: Space) => space.id === spaceId);
+    const targetSpace = get().spaces.find(
+      (space: Space) => space.id === spaceId,
+    );
     if (!targetSpace) {
       return;
     }
@@ -233,7 +246,10 @@ export const useSpaceStore = create<SpaceStore>((set, get) => ({
     const [err, windows] = await tryit(getAllWindows)();
     set({ isLoadingAllWindows: false });
 
-    console.log("🚀 ~ space-store.ts:235 ~ windows:", JSON.stringify(windows, null, 2));
+    console.log(
+      "🚀 ~ space-store.ts:235 ~ windows:",
+      JSON.stringify(windows, null, 2),
+    );
 
     if (err) {
       showFailureToast(err);

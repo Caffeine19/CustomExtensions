@@ -3,9 +3,8 @@
   "name": "toggle-edges-tabs-pane",
   "title": "Toggle Edges Tabs Pane",
   "description": "Toggle Edges Tabs Pane",
-  "icon": "edge-stable.png",
+  "icon": "extension-icon.png",
   "author": "CaffeineCat",
-  "owner": "caffeinecat26",
   "license": "MIT",
   "commands": [
     {

@@ -2,10 +2,9 @@
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "name": "universal-control",
   "title": "Universal Control",
-  "description": "Intergrate with Universal Control between your mac and iPad",
+  "description": "Integrate with Universal Control between your mac and iPad",
   "icon": "extension-icon.png",
   "author": "CaffeineCat",
-  "owner": "caffeinecat26",
   "platforms": [
     "macOS",
     "Windows"
@@ -15,8 +14,8 @@
     {
       "name": "toggle-linking-keyboard-and-mouse",
       "title": "Toggle Linking Keyboard and Mouse",
-      "subtitle": "Universal Contol",
-      "description": "",
+      "subtitle": "Universal Control",
+      "description": "Toggle the 'Allow your pointer and keyboard to move between any nearby Mac or iPad' setting in Display preferences to enable or disable Universal Control linking.",
       "mode": "no-view"
     }
   ],

@@ -5,7 +5,6 @@
   "description": "Switch between Notion Workspace",
   "icon": "extension-icon-v2.png",
   "author": "CaffeineCat",
-  "owner": "caffeinecat26",
   "license": "MIT",
   "commands": [
     {
