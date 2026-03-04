@@ -1,0 +1,83 @@
+import { useState } from "react";
+import { ActionPanel, Action, Grid, closeMainWindow, showHUD } from "@raycast/api";
+import { callHammerspoon } from "./utils/call-hammerspoon";
+
+export default function Command() {
+  const [columns, setColumns] = useState(5);
+  const [isLoading, setIsLoading] = useState(true);
+
+  type Mode = { label: string; icon: string };
+
+  const modeGroupList: Record<string, Mode[]> = {
+    Focus: [
+      { label: "Focus", icon: "player-icons/focus.svg" },
+      { label: "Dynamic Focus", icon: "player-icons/dynamic-focus.svg" },
+      { label: "Study", icon: "player-icons/study.svg" },
+      { label: "Deeper Focus", icon: "player-icons/deeper-focus.svg" },
+      // { label: "8D Odyssey", icon: "player-icons/8d-odyssey.svg" },
+      // { label: "Colored Noises", icon: "player-icons/colored-noises.svg" },
+    ],
+    Relax: [
+      { label: "Relax", icon: "player-icons/relax.svg" },
+      { label: "Nature Elements", icon: "player-icons/nature-elements.svg" },
+      { label: "Spatial Orbit", icon: "player-icons/spatial-orbit.svg" },
+      { label: "Recovery", icon: "player-icons/recovery.svg" },
+      { label: "Wiggly Wisdom", icon: "player-icons/wiggly-wisdom.svg" },
+    ],
+    Sleep: [
+      { label: "Sleep", icon: "player-icons/sleep.svg" },
+      { label: "Wind Down", icon: "player-icons/wind-down.svg" },
+      { label: "Hibernation", icon: "player-icons/hibernation.svg" },
+      { label: "AI Lullaby", icon: "player-icons/ai-lullaby.svg" },
+      { label: "Rainy Outside", icon: "player-icons/rainy-outside.svg" },
+    ],
+  };
+
+  const setMode = async (mode: string) => {
+    callHammerspoon(`handleCallSetEndelMode("${mode}")`);
+    closeMainWindow();
+    showHUD("Endel mode set to " + mode);
+  };
+
+  return (
+    <Grid
+      columns={columns}
+      inset={Grid.Inset.Large}
+      isLoading={isLoading}
+      searchBarAccessory={
+        <Grid.Dropdown
+          tooltip="Grid Item Size"
+          storeValue
+          onChange={(newValue) => {
+            setColumns(parseInt(newValue));
+            setIsLoading(false);
+          }}
+        >
+          <Grid.Dropdown.Item title="Large" value={"3"} />
+          <Grid.Dropdown.Item title="Medium" value={"4"} />
+          <Grid.Dropdown.Item title="Small" value={"5"} />
+        </Grid.Dropdown>
+      }
+    >
+      {!isLoading &&
+        Object.entries(modeGroupList).map(([groupName, modes]) => (
+          <Grid.Section key={groupName} title={groupName} subtitle={undefined}>
+            {modes.map((mode) => (
+              <Grid.Item
+                key={mode.label}
+                content={{ value: { source: mode.icon }, tooltip: mode.label }}
+                title={mode.label}
+                subtitle={"Endel mode"}
+                actions={
+                  <ActionPanel>
+                    <Action title={`Set ${mode.label}`} onAction={() => setMode(mode.label)} />
+                    <Action.CopyToClipboard content={mode.label} />
+                  </ActionPanel>
+                }
+              />
+            ))}
+          </Grid.Section>
+        ))}
+    </Grid>
+  );
+}

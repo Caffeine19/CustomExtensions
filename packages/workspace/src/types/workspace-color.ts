@@ -1,0 +1,33 @@
+export enum WorkspaceColor {
+  Blue = 0,
+  Cyan = 1,
+  Green = 11,
+  Tea = 2,
+  Purple = 10,
+  Pink = 9,
+  Red = 3,
+  Orange = 7,
+  Amber = 8,
+  Yellow = 5,
+  Gray = 4,
+  Zinc = 6,
+  Slate = 13,
+  Transparent = 12,
+}
+
+export const hexMap: Record<WorkspaceColor, string> = {
+  [WorkspaceColor.Blue]: "#69A0FA",
+  [WorkspaceColor.Cyan]: "#58D3DC",
+  [WorkspaceColor.Green]: "#5AE0A0",
+  [WorkspaceColor.Tea]: "#A3E635",
+  [WorkspaceColor.Purple]: "#AB84FF",
+  [WorkspaceColor.Pink]: "#CF87DA",
+  [WorkspaceColor.Red]: "#EE5FB7",
+  [WorkspaceColor.Orange]: "#E9835E",
+  [WorkspaceColor.Amber]: "#DE8E63",
+  [WorkspaceColor.Yellow]: "#FEB967",
+  [WorkspaceColor.Gray]: "#9D9B99",
+  [WorkspaceColor.Zinc]: "#DFDFDF",
+  [WorkspaceColor.Slate]: "#C7DCED",
+  [WorkspaceColor.Transparent]: "#00000000",
+};

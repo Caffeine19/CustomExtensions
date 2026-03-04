@@ -1,0 +1,18 @@
+{
+  "name": "raycast-custom-extensions",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Raycast Custom Extensions Monorepo",
+  "author": "CaffeineCat",
+  "license": "MIT",
+  "packageManager": "pnpm@10.6.2",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "fix-lint": "turbo fix-lint"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.4"
+  }
+}

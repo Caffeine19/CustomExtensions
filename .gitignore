@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Turbo
+.turbo/
+
+# Build output
+dist/
+
+# OS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+
+# pnpm
+pnpm-debug.log*

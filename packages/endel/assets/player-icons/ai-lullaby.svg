@@ -1,0 +1,26 @@
+<svg class="IconWrap-module__9M-XmW__icon ButtonMode-module__6wivga__icon" xmlns="http://www.w3.org/2000/svg" width="24"
+    height="24" viewBox="0 0 56 56" fill="none">
+    <g clip-path="url(#bfe321a4-7aa4-447a-ad5d-f04fdf93341f)">
+        <path fill="url(#0348277c-df0f-4078-8c2d-e37cffea64ae)" stroke="#fff" stroke-linecap="round"
+            stroke-linejoin="round" stroke-miterlimit="10" stroke-width="2"
+            d="M28 54.035c14.82 0 26.833-11.768 26.833-26.285C54.833 13.232 42.82 1.463 28 1.463c-14.82 0-26.833 11.768-26.833 26.286S13.18 54.035 28 54.035z">
+        </path>
+        <path fill="#000"
+            d="M43.019 27.063s-.1 0 0 0c.1-.98.1-1.961.1-2.844 0-10.593-6.809-16.772-15.12-16.772-8.31 0-15.118 6.277-15.118 16.772 0 .98.1 1.863.2 2.844h-.1c-2.303 0-1.101 2.747 0 5.198.801 1.864 1.702 3.63 2.904 3.63C19.089 42.56 24.195 47.954 28 47.954c3.805 0 9.011-5.394 12.115-12.063 1.101 0 2.103-1.864 2.904-3.63 1-2.353 2.403-5.198 0-5.198z">
+        </path>
+    </g>
+    <defs>
+        <radialGradient id="0348277c-df0f-4078-8c2d-e37cffea64ae" cx="0" cy="0" r="1"
+            gradientTransform="matrix(26.7903 0 0 26.2435 28.023 27.775)" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#fff"></stop>
+            <stop offset="0.111" stop-color="#F7F7F7"></stop>
+            <stop offset="0.286" stop-color="#E0E0E0"></stop>
+            <stop offset="0.503" stop-color="#BCBCBC"></stop>
+            <stop offset="0.751" stop-color="#898989"></stop>
+            <stop offset="1" stop-color="#4F4F4F"></stop>
+        </radialGradient>
+        <clipPath id="bfe321a4-7aa4-447a-ad5d-f04fdf93341f">
+            <path fill="#fff" d="M0 0h56v56H0z"></path>
+        </clipPath>
+    </defs>
+</svg>

@@ -1,0 +1,10 @@
+- sort by tags/last active time/date created/name
+- manage workspace
+  - delete
+  - rename
+  - change color
+  - duplicate
+  - share
+- create new workspace
+  - move current tabs from activating window to new workspace
+- custom icon

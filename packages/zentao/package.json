@@ -1,0 +1,109 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "zentao",
+  "title": "Zentao",
+  "description": "Raycast Extension for Zentao",
+  "icon": "extension-icon-v2.png",
+  "author": "CaffeineCat",
+  "owner": "caffeinecat26",
+  "license": "MIT",
+  "type": "module",
+  "commands": [
+    {
+      "name": "search-my-tasks",
+      "title": "Search My Tasks",
+      "subtitle": "Zentao",
+      "description": "Search and view your assigned tasks in Zentao",
+      "mode": "view"
+    },
+    {
+      "name": "search-my-bugs",
+      "title": "Search My Bugs",
+      "subtitle": "Zentao",
+      "description": "Search my bugs",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "zentaoUrl",
+      "type": "textfield",
+      "required": true,
+      "title": "Zentao URL",
+      "description": "The base URL of your Zentao installation (e.g., http://193.5.100.21:8000)",
+      "placeholder": "http://your-zentao-server:port"
+    },
+    {
+      "name": "zentaoSid",
+      "type": "password",
+      "required": true,
+      "title": "Zentao Session ID",
+      "description": "Your Zentao session ID (zentaosid cookie value)",
+      "placeholder": "Your zentaosid cookie value"
+    },
+    {
+      "name": "username",
+      "type": "textfield",
+      "required": true,
+      "title": "Username",
+      "description": "Your Zentao username",
+      "placeholder": "Your Zentao username"
+    },
+    {
+      "name": "password",
+      "type": "password",
+      "required": true,
+      "title": "Password",
+      "description": "Your Zentao password (used for session refresh)",
+      "placeholder": "Your Zentao password"
+    },
+    {
+      "name": "language",
+      "type": "dropdown",
+      "required": true,
+      "title": "Language",
+      "description": "The language to use for the extension",
+      "data": [
+        {
+          "value": "zh-CN",
+          "title": "简体中文"
+        },
+        {
+          "value": "en-US",
+          "title": "English"
+        }
+      ],
+      "default": "en-US"
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.102.3",
+    "@raycast/utils": "^1.17.0",
+    "cheerio": "^1.1.2",
+    "dayjs": "^1.11.13",
+    "fuse.js": "^7.1.0",
+    "i18next": "^25.3.2",
+    "pinyin-match": "^1.2.8",
+    "radash": "^12.1.1",
+    "react-hook-form": "^7.53.0",
+    "react-i18next": "^15.6.1"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^2.0.4",
+    "@types/node": "22.13.10",
+    "@types/react": "19.0.10",
+    "eslint": "^9.22.0",
+    "eslint-plugin-simple-import-sort": "^12.1.1",
+    "prettier": "^3.5.3",
+    "prettier-plugin-jsdoc": "^1.3.3",
+    "typescript": "^5.8.2"
+  },
+  "scripts": {
+    "build": "ray build",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "prepublishOnly": "echo \"\\n\\nIt seems like you are trying to publish the Raycast extension to npm.\\n\\nIf you did intend to publish it to npm, remove the \\`prepublishOnly\\` script and rerun \\`npm publish\\` again.\\nIf you wanted to publish it to the Raycast Store instead, use \\`npm run publish\\` instead.\\n\\n\" && exit 1",
+    "publish": "npx @raycast/api@latest publish"
+  }
+}
