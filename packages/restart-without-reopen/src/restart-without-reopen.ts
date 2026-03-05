@@ -60,9 +60,8 @@ export default async function main() {
         end tell
   `;
 
-  const [err, res] = await tryit(() => runAppleScript(script))();
+  const [err] = await tryit(() => runAppleScript(script))();
   if (err) {
     return console.error("Failed to execute AppleScript:", err);
   }
-  const a = res;
 }
