@@ -2,8 +2,15 @@ import { useState } from "react";
 import { ActionPanel, Action, Grid, closeMainWindow, showHUD } from "@raycast/api";
 import { callHammerspoon } from "./utils/call-hammerspoon";
 
+const COLUMNS = {
+  LARGE: 4,
+  SMALL: 6,
+} as const;
+
+type ColumnsValue = (typeof COLUMNS)[keyof typeof COLUMNS];
+
 export default function Command() {
-  const [columns, setColumns] = useState(5);
+  const [columns, setColumns] = useState<ColumnsValue>(COLUMNS.SMALL);
   const [isLoading, setIsLoading] = useState(true);
 
   type Mode = { label: string; icon: string };
@@ -55,13 +62,12 @@ export default function Command() {
           tooltip="Grid Item Size"
           storeValue
           onChange={(newValue) => {
-            setColumns(parseInt(newValue));
+            setColumns(Number(newValue) as ColumnsValue);
             setIsLoading(false);
           }}
         >
-          <Grid.Dropdown.Item title="Large" value={"3"} />
-          <Grid.Dropdown.Item title="Medium" value={"4"} />
-          <Grid.Dropdown.Item title="Small" value={"5"} />
+          <Grid.Dropdown.Item title="Large" value={COLUMNS.LARGE.toString()} />
+          <Grid.Dropdown.Item title="Small" value={COLUMNS.SMALL.toString()} />
         </Grid.Dropdown>
       }
     >
