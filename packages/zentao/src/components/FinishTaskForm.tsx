@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Form, Icon, popToRoot, showToast, Toast } from "@raycast/api";
+import { Action, ActionPanel, Form, Icon, showToast, Toast, useNavigation } from "@raycast/api";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
@@ -65,7 +65,6 @@ function calculateFinishTime(startDateTime: string, consumedHours: number): stri
 
 interface FinishTaskFormProps {
   task: Task;
-  onFinished?: () => void;
 }
 
 interface FormValues {
@@ -77,8 +76,9 @@ interface FormValues {
   comment: string;
 }
 
-export function FinishTaskForm({ task, onFinished }: FinishTaskFormProps) {
+export function FinishTaskForm({ task }: FinishTaskFormProps) {
   const { t } = useT();
+  const { pop } = useNavigation();
   const [isLoading, setIsLoading] = useState(false);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [formUid, setFormUid] = useState<string>("");
@@ -191,12 +191,7 @@ export function FinishTaskForm({ task, onFinished }: FinishTaskFormProps) {
         message: t("taskCompletion.taskCompletedSuccessMessage", { title: task.title }),
       });
 
-      if (onFinished) {
-        onFinished();
-      }
-
-      // 返回到根视图
-      popToRoot();
+      pop();
     } catch (error) {
       logger.error("Error finishing task:", error instanceof Error ? error : String(error));
 

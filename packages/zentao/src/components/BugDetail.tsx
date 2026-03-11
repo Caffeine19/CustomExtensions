@@ -255,6 +255,9 @@ ${bugDetail.notifyEmail ? `**${t("bugDetails.notifyEmail")}:** ${bugDetail.notif
                 icon={Icon.Text}
               />
             )}
+            {bugDetail && (
+              <Action.CopyToClipboard title={t("bugDetails.copyAsMarkdown")} content={markdown} icon={Icon.Document} />
+            )}
           </ActionPanel.Section>
         </ActionPanel>
       }

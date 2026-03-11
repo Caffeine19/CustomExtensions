@@ -3,7 +3,8 @@
     "loading": "Loading...",
     "refresh": "Refresh",
     "cancel": "Cancel",
-    "submit": "Submit"
+    "submit": "Submit",
+    "pinned": "Pinned"
   },
   "taskList": {
     "searchPlaceholder": "Search tasks with fuzzy match & pinyin support (拼音搜索)",
@@ -31,12 +32,18 @@
     "viewTaskDetails": "View Task Details",
     "openInZentao": "Open in Zentao",
     "copyTaskId": "Copy Task ID",
+    "copyTaskUrl": "Copy Task URL",
+    "pinTask": "Pin Task",
+    "unpinTask": "Unpin Task",
     "finishTask": "Finish Task"
   },
   "bugActions": {
     "viewBugDetails": "View Bug Details",
     "openInZentao": "Open in Zentao",
     "copyBugId": "Copy Bug ID",
+    "copyBugUrl": "Copy Bug URL",
+    "pinBug": "Pin Bug",
+    "unpinBug": "Unpin Bug",
     "resolveBug": "Resolve Bug"
   },
   "sortActions": {
@@ -138,6 +145,7 @@
     "taskTitle": "Task",
     "copyUrl": "Copy Task URL",
     "copyTitle": "Copy Task Title",
+    "copyAsMarkdown": "Copy Detail as Markdown",
     "notSet": "Not Set",
     "notCalculated": "Not Calculated",
     "notAssigned": "Not Assigned",
@@ -180,6 +188,7 @@
     "copyBugId": "Copy Bug ID",
     "copyBugUrl": "Copy Bug URL",
     "copyBugTitle": "Copy Bug Title",
+    "copyAsMarkdown": "Copy Detail as Markdown",
     "copyInfo": "Copy Info",
     "showMetadata": "Show Metadata",
     "hideMetadata": "Hide Metadata",

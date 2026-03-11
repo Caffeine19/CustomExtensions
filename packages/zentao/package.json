@@ -82,6 +82,7 @@
     "dayjs": "^1.11.13",
     "fuse.js": "^7.1.0",
     "i18next": "^25.3.2",
+    "mnemonist": "^0.40.3",
     "pinyin-match": "^1.2.8",
     "radash": "^12.1.1",
     "react-hook-form": "^7.53.0",

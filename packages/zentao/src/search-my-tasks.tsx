@@ -1,6 +1,7 @@
-import { Action, ActionPanel, getPreferenceValues, Icon, List, showToast, Toast } from "@raycast/api";
+import { Action, ActionPanel, Color, getPreferenceValues, Icon, List, showToast, Toast } from "@raycast/api";
 import { useCachedState } from "@raycast/utils";
 import dayjs from "dayjs";
+import { CircularBuffer } from "mnemonist";
 import { alphabetical, sift, unique } from "radash";
 import { useEffect, useMemo, useState } from "react";
 
@@ -27,9 +28,22 @@ export default function Command() {
 
   const [tasks, setTasks] = useCachedState<Task[]>(CACHE_KEYS.TASKS, []);
   const [isLoading, setIsLoading] = useState(false);
-  const [sortOrder, setSortOrder] = useState<SortOrder>("none");
+  const [sortOrder, setSortOrder] = useState<SortOrder>("date-desc");
   const [selectedProject, setSelectedProject] = useCachedState<string>(CACHE_KEYS.SELECTED_PROJECT, "all");
+  const [pinnedTaskIds, setPinnedTaskIds] = useCachedState<string[]>(CACHE_KEYS.PINNED_TASKS, []);
   const [searchQuery, setSearchQuery] = useState<string>("");
+
+  const togglePinTask = (taskId: string) => {
+    setPinnedTaskIds((prev) => {
+      if (prev.includes(taskId)) {
+        return prev.filter((id) => id !== taskId);
+      }
+
+      const buffer = CircularBuffer.from(prev, Array, 10);
+      buffer.push(taskId);
+      return Array.from(buffer);
+    });
+  };
 
   const fetchTasks = async () => {
     try {
@@ -49,18 +63,18 @@ export default function Command() {
 
       // 检查是否是会话过期错误
       if (error instanceof SessionExpiredError) {
-        showToast({
+        return showToast({
           style: Toast.Style.Failure,
           title: t("errors.sessionExpired"),
           message: t("errors.sessionExpiredAction"),
         });
-      } else {
-        showToast({
-          style: Toast.Style.Failure,
-          title: t("taskList.failedToFetchTasks"),
-          message: error instanceof Error ? error.message : t("errors.unknownError"),
-        });
       }
+
+      showToast({
+        style: Toast.Style.Failure,
+        title: t("taskList.failedToFetchTasks"),
+        message: error instanceof Error ? error.message : t("errors.unknownError"),
+      });
     } finally {
       setIsLoading(false);
     }
@@ -157,6 +171,119 @@ export default function Command() {
     return sorted;
   }, [searchedTasks, sortOrder]);
 
+  /** 置顶任务排在前面 */
+  const pinnedTasks = useMemo(() => {
+    return sortedTasks.filter((t) => pinnedTaskIds.includes(t.id));
+  }, [sortedTasks, pinnedTaskIds]);
+
+  const unpinnedTasks = useMemo(() => {
+    return sortedTasks.filter((t) => !pinnedTaskIds.includes(t.id));
+  }, [sortedTasks, pinnedTaskIds]);
+
+  const renderTaskItem = (task: Task, isOverdue: boolean | string) => {
+    const isPinned = pinnedTaskIds.includes(task.id);
+    return (
+      <List.Item
+        key={task.id}
+        icon={getStatusIconConfig(task.status)}
+        title={task.title}
+        subtitle={task.project}
+        accessories={[
+          ...(isPinned ? [{ icon: { source: Icon.Pin, tintColor: Color.Red } }] : []),
+          ...(task.deadline
+            ? [
+                {
+                  tag: {
+                    value: task.deadline,
+                    color: isOverdue ? TAILWIND_COLORS.red[400] : TAILWIND_COLORS.gray[300],
+                  },
+                },
+              ]
+            : []),
+          {
+            icon: {
+              source: getPriorityIcon(task.priority),
+              tintColor: getPriorityColor(task.priority),
+            },
+            tooltip: getPriorityLabel(task.priority),
+          },
+        ]}
+        actions={
+          <ActionPanel>
+            <Action.Push title={t("taskActions.viewTaskDetails")} target={<TaskDetail task={task} />} icon={Icon.Eye} />
+            <Action
+              title={isPinned ? t("taskActions.unpinTask") : t("taskActions.pinTask")}
+              onAction={() => togglePinTask(task.id)}
+              icon={isPinned ? Icon.PinDisabled : Icon.Pin}
+              shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
+            />
+            <Action.OpenInBrowser
+              title={t("taskActions.openInZentao")}
+              url={`${preferences.zentaoUrl}/task-view-${task.id}.html`}
+              icon={Icon.Globe}
+            />
+            <Action.CopyToClipboard
+              title={t("taskActions.copyTaskId")}
+              content={task.id}
+              icon={Icon.Clipboard}
+              shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
+            />
+            <Action.CopyToClipboard
+              title={t("taskActions.copyTaskUrl")}
+              content={`${preferences.zentaoUrl}/task-view-${task.id}.html`}
+              icon={Icon.Link}
+              shortcut={{ modifiers: ["cmd", "opt"], key: "c" }}
+            />
+            <SessionRefreshAction onRefreshSuccess={handleRefreshSession} />
+
+            <ActionPanel.Section title={t("sortActions.sortByDate")}>
+              <Action
+                title={t("sortActions.sortByDateEarliestFirst")}
+                onAction={() => setSortOrder("date-asc")}
+                icon={Icon.ArrowUp}
+              />
+              <Action
+                title={t("sortActions.sortByDateLatestFirst")}
+                onAction={() => setSortOrder("date-desc")}
+                icon={Icon.ArrowDown}
+              />
+            </ActionPanel.Section>
+
+            <ActionPanel.Section title={t("sortActions.sortByPriority")}>
+              <Action
+                title={t("sortActions.sortByPriorityHighToLow")}
+                onAction={() => setSortOrder("priority-asc")}
+                icon={Icon.ArrowUp}
+              />
+              <Action
+                title={t("sortActions.sortByPriorityLowToHigh")}
+                onAction={() => setSortOrder("priority-desc")}
+                icon={Icon.ArrowDown}
+              />
+            </ActionPanel.Section>
+
+            <ActionPanel.Section title={t("sortActions.sortByStatus")}>
+              <Action
+                title={t("sortActions.sortByStatusActiveFirst")}
+                onAction={() => setSortOrder("status-asc")}
+                icon={Icon.ArrowUp}
+              />
+              <Action
+                title={t("sortActions.sortByStatusCompletedFirst")}
+                onAction={() => setSortOrder("status-desc")}
+                icon={Icon.ArrowDown}
+              />
+            </ActionPanel.Section>
+
+            <ActionPanel.Section title={t("sortActions.resetSort")}>
+              <Action title={t("sortActions.resetSort")} onAction={() => setSortOrder("none")} icon={Icon.Minus} />
+            </ActionPanel.Section>
+          </ActionPanel>
+        }
+      />
+    );
+  };
+
   return (
     <List
       isLoading={isLoading}
@@ -231,7 +358,7 @@ export default function Command() {
         </ActionPanel>
       }
     >
-      {sortedTasks.length === 0 ? (
+      {pinnedTasks.length === 0 && unpinnedTasks.length === 0 ? (
         <List.EmptyView
           title={t("taskList.noTasksTitle")}
           description={t("taskList.noTasksDescription")}
@@ -243,109 +370,40 @@ export default function Command() {
           }
         />
       ) : (
-        sortedTasks.map((task) => {
-          const isOverdue =
-            !(
-              task.status === TaskStatus.CANCEL ||
-              task.status === TaskStatus.DONE ||
-              task.status === TaskStatus.CLOSED
-            ) &&
-            task.deadline &&
-            !(dayjs(task.deadline).format("MM DD") === dayjs().format("MM DD")) &&
-            dayjs(task.deadline).year(dayjs().year()).isBefore(dayjs());
+        <>
+          {pinnedTasks.length > 0 && (
+            <List.Section title={t("general.pinned")}>
+              {pinnedTasks.map((task) => {
+                const isOverdue =
+                  !(
+                    task.status === TaskStatus.CANCEL ||
+                    task.status === TaskStatus.DONE ||
+                    task.status === TaskStatus.CLOSED
+                  ) &&
+                  task.deadline &&
+                  !(dayjs(task.deadline).format("MM DD") === dayjs().format("MM DD")) &&
+                  dayjs(task.deadline).year(dayjs().year()).isBefore(dayjs());
 
-          return (
-            <List.Item
-              key={task.id}
-              icon={getStatusIconConfig(task.status)}
-              title={task.title}
-              subtitle={task.project}
-              accessories={[
-                ...(task.deadline
-                  ? [
-                      {
-                        tag: {
-                          value: task.deadline,
-                          color: isOverdue ? TAILWIND_COLORS.red[400] : TAILWIND_COLORS.gray[300],
-                        },
-                      },
-                    ]
-                  : []),
-                {
-                  icon: {
-                    source: getPriorityIcon(task.priority),
-                    tintColor: getPriorityColor(task.priority),
-                  },
-                  tooltip: getPriorityLabel(task.priority),
-                },
-              ]}
-              actions={
-                <ActionPanel>
-                  <Action.Push
-                    title={t("taskActions.viewTaskDetails")}
-                    target={<TaskDetail task={task} />}
-                    icon={Icon.Eye}
-                  />
-                  <Action.OpenInBrowser
-                    title={t("taskActions.openInZentao")}
-                    url={`${preferences.zentaoUrl}/task-view-${task.id}.html`}
-                    icon={Icon.Globe}
-                  />
-                  <Action.CopyToClipboard title={t("taskActions.copyTaskId")} content={task.id} icon={Icon.Clipboard} />
-                  <Action title={t("general.refresh")} onAction={fetchTasks} icon={Icon.ArrowClockwise} />
-                  <SessionRefreshAction onRefreshSuccess={handleRefreshSession} />
+                return renderTaskItem(task, isOverdue);
+              })}
+            </List.Section>
+          )}
+          <List.Section title={pinnedTasks.length > 0 ? t("taskList.myTasks") : undefined}>
+            {unpinnedTasks.map((task) => {
+              const isOverdue =
+                !(
+                  task.status === TaskStatus.CANCEL ||
+                  task.status === TaskStatus.DONE ||
+                  task.status === TaskStatus.CLOSED
+                ) &&
+                task.deadline &&
+                !(dayjs(task.deadline).format("MM DD") === dayjs().format("MM DD")) &&
+                dayjs(task.deadline).year(dayjs().year()).isBefore(dayjs());
 
-                  <ActionPanel.Section title={t("sortActions.sortByDate")}>
-                    <Action
-                      title={t("sortActions.sortByDateEarliestFirst")}
-                      onAction={() => setSortOrder("date-asc")}
-                      icon={Icon.ArrowUp}
-                    />
-                    <Action
-                      title={t("sortActions.sortByDateLatestFirst")}
-                      onAction={() => setSortOrder("date-desc")}
-                      icon={Icon.ArrowDown}
-                    />
-                  </ActionPanel.Section>
-
-                  <ActionPanel.Section title={t("sortActions.sortByPriority")}>
-                    <Action
-                      title={t("sortActions.sortByPriorityHighToLow")}
-                      onAction={() => setSortOrder("priority-asc")}
-                      icon={Icon.ArrowUp}
-                    />
-                    <Action
-                      title={t("sortActions.sortByPriorityLowToHigh")}
-                      onAction={() => setSortOrder("priority-desc")}
-                      icon={Icon.ArrowDown}
-                    />
-                  </ActionPanel.Section>
-
-                  <ActionPanel.Section title={t("sortActions.sortByStatus")}>
-                    <Action
-                      title={t("sortActions.sortByStatusActiveFirst")}
-                      onAction={() => setSortOrder("status-asc")}
-                      icon={Icon.ArrowUp}
-                    />
-                    <Action
-                      title={t("sortActions.sortByStatusCompletedFirst")}
-                      onAction={() => setSortOrder("status-desc")}
-                      icon={Icon.ArrowDown}
-                    />
-                  </ActionPanel.Section>
-
-                  <ActionPanel.Section title={t("sortActions.resetSort")}>
-                    <Action
-                      title={t("sortActions.resetSort")}
-                      onAction={() => setSortOrder("none")}
-                      icon={Icon.Minus}
-                    />
-                  </ActionPanel.Section>
-                </ActionPanel>
-              }
-            />
-          );
-        })
+              return renderTaskItem(task, isOverdue);
+            })}
+          </List.Section>
+        </>
       )}
     </List>
   );

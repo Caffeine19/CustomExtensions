@@ -8,4 +8,8 @@ export const CACHE_KEYS = {
   BUGS: "bugs",
   /** 任务列表缓存 */
   TASKS: "tasks",
+  /** 置顶的任务ID列表 */
+  PINNED_TASKS: "pinned-tasks",
+  /** 置顶的BugID列表 */
+  PINNED_BUGS: "pinned-bugs",
 } as const;

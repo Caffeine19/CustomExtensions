@@ -139,6 +139,7 @@ export function TaskDetail({ task }: TaskDetailProps) {
               icon={Icon.Link}
             />
             <Action.CopyToClipboard title={t("taskDetails.copyTitle")} content={taskDetail.title} icon={Icon.Text} />
+            <Action.CopyToClipboard title={t("taskDetails.copyAsMarkdown")} content={markdown} icon={Icon.Document} />
           </ActionPanel.Section>
         </ActionPanel>
       }

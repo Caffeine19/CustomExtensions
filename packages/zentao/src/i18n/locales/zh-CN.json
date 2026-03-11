@@ -3,7 +3,8 @@
     "loading": "加载中...",
     "refresh": "刷新",
     "cancel": "取消",
-    "submit": "提交"
+    "submit": "提交",
+    "pinned": "已置顶"
   },
   "taskList": {
     "searchPlaceholder": "按标题、状态、优先级或指派人搜索任务...",
@@ -31,12 +32,18 @@
     "viewTaskDetails": "查看任务详情",
     "openInZentao": "在禅道中打开",
     "copyTaskId": "复制任务ID",
+    "copyTaskUrl": "复制任务URL",
+    "pinTask": "置顶任务",
+    "unpinTask": "取消置顶",
     "finishTask": "完成任务"
   },
   "bugActions": {
     "viewBugDetails": "查看Bug详情",
     "openInZentao": "在禅道中打开",
     "copyBugId": "复制BugID",
+    "copyBugUrl": "复制Bug URL",
+    "pinBug": "置顶Bug",
+    "unpinBug": "取消置顶",
     "resolveBug": "解决Bug"
   },
   "sortActions": {
@@ -138,6 +145,7 @@
     "taskTitle": "任务",
     "copyUrl": "复制任务 URL",
     "copyTitle": "复制任务标题",
+    "copyAsMarkdown": "复制详情为 Markdown",
     "notSet": "未设置",
     "notCalculated": "未计算",
     "notAssigned": "未指派",
@@ -180,6 +188,7 @@
     "copyBugId": "复制Bug ID",
     "copyBugUrl": "复制Bug URL",
     "copyBugTitle": "复制Bug标题",
+    "copyAsMarkdown": "复制详情为 Markdown",
     "copyInfo": "复制信息",
     "showMetadata": "显示元数据",
     "hideMetadata": "隐藏元数据",
