@@ -79,11 +79,9 @@ export default function Command() {
                 key={mode.label}
                 content={{ value: { source: mode.icon }, tooltip: mode.label }}
                 title={mode.label}
-                subtitle={"Endel mode"}
                 actions={
                   <ActionPanel>
                     <Action title={`Set ${mode.label}`} onAction={() => setMode(mode.label)} />
-                    <Action.CopyToClipboard content={mode.label} />
                   </ActionPanel>
                 }
               />
