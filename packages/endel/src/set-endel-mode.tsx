@@ -11,14 +11,20 @@ export default function Command() {
   const modeGroupList: Record<string, Mode[]> = {
     Focus: [
       { label: "Focus", icon: "player-icons/focus.svg" },
+      { label: "Colored Noises", icon: "player-icons/colored-noises.svg" },
       { label: "Dynamic Focus", icon: "player-icons/dynamic-focus.svg" },
       { label: "Study", icon: "player-icons/study.svg" },
       { label: "Deeper Focus", icon: "player-icons/deeper-focus.svg" },
-      // { label: "8D Odyssey", icon: "player-icons/8d-odyssey.svg" },
-      // { label: "Colored Noises", icon: "player-icons/colored-noises.svg" },
+
+      // TODO need to add an icon
+      // {
+      //   label: "Solfeggio Tones",
+      //   icon: "",
+      // },
     ],
     Relax: [
       { label: "Relax", icon: "player-icons/relax.svg" },
+      { label: "8D Odyssey", icon: "player-icons/8d-odyssey.svg" },
       { label: "Nature Elements", icon: "player-icons/nature-elements.svg" },
       { label: "Spatial Orbit", icon: "player-icons/spatial-orbit.svg" },
       { label: "Recovery", icon: "player-icons/recovery.svg" },
@@ -26,10 +32,10 @@ export default function Command() {
     ],
     Sleep: [
       { label: "Sleep", icon: "player-icons/sleep.svg" },
+      { label: "Rainy Outside", icon: "player-icons/rainy-outside.svg" },
       { label: "Wind Down", icon: "player-icons/wind-down.svg" },
       { label: "Hibernation", icon: "player-icons/hibernation.svg" },
       { label: "AI Lullaby", icon: "player-icons/ai-lullaby.svg" },
-      { label: "Rainy Outside", icon: "player-icons/rainy-outside.svg" },
     ],
   };
 
