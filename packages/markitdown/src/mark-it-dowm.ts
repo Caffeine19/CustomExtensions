@@ -15,6 +15,7 @@ export default async function Command() {
   }
 
   // Fallback: check clipboard for a file path
+  // Useful when in editor like VS Code
   if (!sourceFilePath) {
     const [clipErr, clipContent] = await tryit(Clipboard.read)();
     if (!clipErr) {
@@ -49,8 +50,8 @@ export default async function Command() {
     shell: "/bin/zsh",
     env: { ...process.env, PATH: extendedPath },
   });
+
   if (convertErr) {
-    console.error("🚀 ~ mark-it-dowm.ts:43 ~ Command ~ convertErr:", convertErr);
     return showToast({
       style: Toast.Style.Failure,
       title: "Conversion Failed",
@@ -59,7 +60,6 @@ export default async function Command() {
   }
 
   if (convertRes.stderr) {
-    console.error("🚀 ~ mark-it-dowm.ts:52 ~ Command ~ stderr:", convertRes.stderr);
     return showToast({
       style: Toast.Style.Failure,
       title: "Conversion Error",
@@ -68,7 +68,7 @@ export default async function Command() {
   }
 
   // Open the converted markdown file in VS Code
-  const [openErr] = await tryit(open)(mdFilePath, "com.microsoft.VSCode");
+  const [openErr] = await tryit(open)(mdFilePath);
   if (openErr) {
     return showToast({
       style: Toast.Style.Failure,
