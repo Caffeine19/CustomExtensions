@@ -76,7 +76,7 @@ export function BugDetail({ bug: { id } }: BugDetailProps) {
   }, [id]);
 
   // 如果正在加载或bug详情为空，显示加载提示
-  const markdown =
+  const markdown = (
     isLoading || !bugDetail
       ? `# ${t("general.loading")}\n\n${t("bugDetails.pleaseWait")}`
       : /* md */ `
@@ -153,7 +153,8 @@ ${bugDetail.notifyEmail ? `**${t("bugDetails.notifyEmail")}:** ${bugDetail.notif
 `
     : ""
 }
-`;
+`
+  ).trim();
 
   return (
     <Detail
