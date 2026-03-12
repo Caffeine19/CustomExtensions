@@ -59,6 +59,7 @@
     "sortBySeverity": "Sort by Severity",
     "sortBySeverityHighToLow": "Sort by Severity (High to Low)",
     "sortBySeverityLowToHigh": "Sort by Severity (Low to High)",
+    "sortByName": "Sort by Name",
     "resetSort": "Reset Sort"
   },
   "taskForm": {

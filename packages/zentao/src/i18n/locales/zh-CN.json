@@ -59,6 +59,7 @@
     "sortBySeverity": "按严重程度排序",
     "sortBySeverityHighToLow": "按严重程度排序（高到低）",
     "sortBySeverityLowToHigh": "按严重程度排序（低到高）",
+    "sortByName": "按名称排序",
     "resetSort": "重置排序"
   },
   "taskForm": {

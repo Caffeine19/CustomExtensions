@@ -29,7 +29,8 @@ type SortOrder =
   | "status-asc"
   | "status-desc"
   | "severity-asc"
-  | "severity-desc";
+  | "severity-desc"
+  | "name";
 
 export default function Command() {
   const preferences = getPreferenceValues<Preferences>();
@@ -181,6 +182,8 @@ export default function Command() {
         } else {
           return severityA - severityB; // 1,2,3,4 (minor to critical)
         }
+      } else if (sortOrder === "name") {
+        return a.title.localeCompare(b.title);
       }
 
       return 0;
@@ -314,6 +317,10 @@ export default function Command() {
                 onAction={() => setSortOrder("status-desc")}
                 icon={Icon.ArrowDown}
               />
+            </ActionPanel.Section>
+
+            <ActionPanel.Section title={t("sortActions.sortByName")}>
+              <Action title={t("sortActions.sortByName")} onAction={() => setSortOrder("name")} icon={Icon.Text} />
             </ActionPanel.Section>
 
             <ActionPanel.Section title={t("sortActions.resetSort")}>
