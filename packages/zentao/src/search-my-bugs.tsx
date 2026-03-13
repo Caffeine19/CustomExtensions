@@ -1,6 +1,7 @@
 import { Action, ActionPanel, getPreferenceValues, Icon, List, showToast, Toast } from "@raycast/api";
 import { useCachedState } from "@raycast/utils";
 import dayjs from "dayjs";
+import { Effect } from "effect";
 import { CircularBuffer } from "mnemonist";
 import { alphabetical, sift, unique } from "radash";
 import { useEffect, useMemo, useState } from "react";
@@ -14,10 +15,9 @@ import { CACHE_KEYS } from "./constants/key";
 import { getPriorityColor, getPriorityIcon, getPriorityLabel } from "./constants/priority";
 import { useT } from "./hooks/useT";
 import { BugListItem, BugStatus } from "./types/bug";
+import { withAutoRetry } from "./utils/autoRetry";
 import { fetchBugsFromZentao } from "./utils/bugService";
-import { SessionExpiredError } from "./utils/error";
 import { searchBugs } from "./utils/fuseSearch";
-import { logger } from "./utils/logger";
 import { slice } from "./utils/slice";
 
 type SortOrder =
@@ -59,35 +59,33 @@ export default function Command() {
   };
 
   const fetchBugs = async () => {
+    setIsLoading(true);
+
+    const program = fetchBugsFromZentao().pipe(
+      withAutoRetry(),
+      Effect.tap((parsedBugs) =>
+        Effect.sync(() => {
+          setBugs(parsedBugs);
+          showToast({
+            style: Toast.Style.Success,
+            title: t("bugList.connectedToZentao"),
+            message: t("bugList.foundBugs", { count: parsedBugs.length }),
+          });
+        }),
+      ),
+      Effect.catchAll((e) =>
+        Effect.sync(() => {
+          showToast({
+            style: Toast.Style.Failure,
+            title: t("bugList.failedToFetchBugs"),
+            message: e.message,
+          });
+        }),
+      ),
+    );
+
     try {
-      setIsLoading(true);
-
-      const parsedBugs = await fetchBugsFromZentao();
-
-      showToast({
-        style: Toast.Style.Success,
-        title: t("bugList.connectedToZentao"),
-        message: t("bugList.foundBugs", { count: parsedBugs.length }),
-      });
-
-      setBugs(parsedBugs);
-    } catch (error) {
-      logger.error("Error fetching bugs:", error instanceof Error ? error : String(error));
-
-      // 检查是否是会话过期错误
-      if (error instanceof SessionExpiredError) {
-        showToast({
-          style: Toast.Style.Failure,
-          title: t("errors.sessionExpired"),
-          message: t("errors.sessionExpiredAction"),
-        });
-      } else {
-        showToast({
-          style: Toast.Style.Failure,
-          title: t("bugList.failedToFetchBugs"),
-          message: error instanceof Error ? error.message : t("errors.unknownError"),
-        });
-      }
+      await Effect.runPromise(program);
     } finally {
       setIsLoading(false);
     }

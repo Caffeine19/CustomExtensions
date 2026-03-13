@@ -1,91 +1,90 @@
 import { showToast, Toast } from "@raycast/api";
+import { Effect } from "effect";
 
 import i18n from "../i18n";
-import { SessionExpiredError } from "./error";
+import {
+  HttpError,
+  LoginFailedError,
+  LoginResponseParseError,
+  SessionExpiredError,
+  SessionRefreshError,
+} from "./error";
 import { logger } from "./logger";
 import { reLoginUser } from "./loginService";
 
+/** 重新登录可能产生的错误类型 */
+type ReloginErrors = LoginFailedError | LoginResponseParseError | SessionRefreshError | HttpError;
+
 /** 自动重试包装器选项 */
 interface AutoRetryOptions {
-  /** 最大重试次数（默认为1） */
-  maxRetries?: number;
   /** 是否显示刷新会话的提示（默认为true） */
   showToast?: boolean;
 }
 
 /**
- * 包装异步函数，在会话过期时自动刷新会话并重试
+ * 包装 Effect，在会话过期时自动刷新会话并重试一次
  *
  * @example
  *   ```typescript
- *   const tasks = await withAutoRetry(async () => {
- *     return await fetchTasksFromZentao();
- *   });
+ *   const bugs = await Effect.runPromise(
+ *     fetchBugsFromZentao().pipe(withAutoRetry),
+ *   );
  *   ```;
  *
- * @param fn - 要执行的异步函数
+ * @param effect - 要执行的 Effect
  * @param options - 重试选项
- * @returns 包装后的函数返回值
+ * @returns 包装后的 Effect（SessionExpiredError 被处理，可能新增重新登录相关错误）
  */
-export async function withAutoRetry<T>(fn: () => Promise<T>, options: AutoRetryOptions = {}): Promise<T> {
-  const { maxRetries = 1, showToast: shouldShowToast = true } = options;
-  let lastError: Error | null = null;
+export const withAutoRetry =
+  (options: AutoRetryOptions = {}) =>
+  <A, E>(effect: Effect.Effect<A, E | SessionExpiredError>): Effect.Effect<A, E | ReloginErrors> => {
+    const { showToast: shouldShowToast = true } = options;
 
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      // 如果不是会话过期错误，或已经是最后一次尝试，直接抛出
-      if (!(error instanceof SessionExpiredError) || attempt >= maxRetries) {
-        throw error;
-      }
+    return effect.pipe(
+      Effect.catchTag("SessionExpiredError", () =>
+        Effect.gen(function* () {
+          logger.info("会话已过期，正在自动刷新会话...");
 
-      lastError = error;
-      logger.info(`会话已过期（尝试 ${attempt + 1}/${maxRetries + 1}），正在自动刷新会话...`);
+          if (shouldShowToast) {
+            yield* Effect.promise(() =>
+              showToast({
+                style: Toast.Style.Animated,
+                title: i18n.t("sessionRefresh.autoRefreshingSession"),
+                message: i18n.t("sessionRefresh.pleaseWait"),
+              }),
+            );
+          }
 
-      try {
-        // 显示会话刷新提示
-        if (shouldShowToast) {
-          await showToast({
-            style: Toast.Style.Animated,
-            title: i18n.t("sessionRefresh.autoRefreshingSession"),
-            message: i18n.t("sessionRefresh.pleaseWait"),
-          });
-        }
+          yield* reLoginUser().pipe(
+            Effect.tapError((refreshError) =>
+              Effect.sync(() => {
+                logger.error("自动刷新会话失败:", refreshError.message);
+                if (shouldShowToast) {
+                  showToast({
+                    style: Toast.Style.Failure,
+                    title: i18n.t("sessionRefresh.autoRefreshFailed"),
+                    message: refreshError.message,
+                  });
+                }
+              }),
+            ),
+          );
 
-        // 尝试刷新会话
-        await reLoginUser();
+          logger.info("会话刷新成功，将重试操作");
 
-        logger.info("会话刷新成功，将重试操作");
+          if (shouldShowToast) {
+            yield* Effect.promise(() =>
+              showToast({
+                style: Toast.Style.Success,
+                title: i18n.t("sessionRefresh.autoRefreshSuccess"),
+                message: i18n.t("sessionRefresh.retryingOperation"),
+              }),
+            );
+          }
 
-        // 显示成功提示
-        if (shouldShowToast) {
-          await showToast({
-            style: Toast.Style.Success,
-            title: i18n.t("sessionRefresh.autoRefreshSuccess"),
-            message: i18n.t("sessionRefresh.retryingOperation"),
-          });
-        }
-
-        // 继续下一次循环，重试原操作
-      } catch (refreshError) {
-        logger.error("自动刷新会话失败:", refreshError instanceof Error ? refreshError : String(refreshError));
-
-        // 显示错误提示
-        if (shouldShowToast) {
-          await showToast({
-            style: Toast.Style.Failure,
-            title: i18n.t("sessionRefresh.autoRefreshFailed"),
-            message: refreshError instanceof Error ? refreshError.message : i18n.t("errors.unknownError"),
-          });
-        }
-
-        // 抛出刷新错误
-        throw refreshError;
-      }
-    }
-  }
-
-  // 理论上不会到达这里，但为了类型安全
-  throw lastError || new Error("未知错误");
-}
+          // 重试一次原操作
+          return yield* effect as Effect.Effect<A, E | ReloginErrors>;
+        }),
+      ),
+    ) as Effect.Effect<A, E | ReloginErrors>;
+  };

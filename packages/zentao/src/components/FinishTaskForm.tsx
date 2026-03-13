@@ -1,13 +1,13 @@
 import { Action, ActionPanel, Form, Icon, showToast, Toast, useNavigation } from "@raycast/api";
 import dayjs from "dayjs";
+import { Effect } from "effect";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
 import { useT } from "../hooks/useT";
 import { Task } from "../types/task";
 import { TeamMember } from "../types/teamMember";
-import { SessionExpiredError } from "../utils/error";
-import { logger } from "../utils/logger";
+import { withAutoRetry } from "../utils/autoRetry";
 import { fetchTaskFormDetails, finishTask, FinishTaskParams } from "../utils/taskService";
 import { SessionRefreshAction } from "./SessionRefreshAction";
 
@@ -120,34 +120,31 @@ export function FinishTaskForm({ task }: FinishTaskFormProps) {
   });
 
   const loadFormData = async () => {
-    try {
-      const formDetails = await fetchTaskFormDetails(task.id);
-      setMembers(formDetails.members);
-      setFormUid(formDetails.uid);
+    const program = fetchTaskFormDetails(task.id).pipe(
+      withAutoRetry(),
+      Effect.tap((formDetails) =>
+        Effect.sync(() => {
+          setMembers(formDetails.members);
+          setFormUid(formDetails.uid);
 
-      const selectedMember = formDetails.members.find((member) => member.selected);
-      if (selectedMember) {
-        // Update the form with the selected member's value instead of the task's assignedTo
-        setValue("assignedTo", selectedMember.value);
-      }
-    } catch (error) {
-      logger.error("Failed to load form details:", error instanceof Error ? error : String(error));
+          const selectedMember = formDetails.members.find((member) => member.selected);
+          if (selectedMember) {
+            setValue("assignedTo", selectedMember.value);
+          }
+        }),
+      ),
+      Effect.catchAll((e) =>
+        Effect.sync(() => {
+          showToast({
+            style: Toast.Style.Failure,
+            title: t("errors.loadFormDetailsError"),
+            message: e.message,
+          });
+        }),
+      ),
+    );
 
-      // 检查是否是会话过期错误
-      if (error instanceof SessionExpiredError) {
-        showToast({
-          style: Toast.Style.Failure,
-          title: t("errors.sessionExpired"),
-          message: t("errors.sessionExpiredAction"),
-        });
-      } else {
-        showToast({
-          style: Toast.Style.Failure,
-          title: t("errors.loadFormDetailsError"),
-          message: String(error),
-        });
-      }
-    }
+    await Effect.runPromise(program);
   };
 
   // Watch currentConsumed and realStarted to update total consumed and finish time
@@ -168,47 +165,42 @@ export function FinishTaskForm({ task }: FinishTaskFormProps) {
   const onSubmit = async (values: FormValues) => {
     setIsLoading(true);
 
+    const params: FinishTaskParams = {
+      taskId: task.id,
+      currentConsumed: values.currentConsumed,
+      consumed: values.consumed,
+      assignedTo: values.assignedTo || task.assignedTo,
+      realStarted: values.realStarted,
+      finishedDate: values.finishedDate,
+      status: "done",
+      uid: formUid,
+      comment: values.comment,
+    };
+
+    const program = finishTask(params).pipe(
+      Effect.tap(() =>
+        Effect.sync(() => {
+          showToast({
+            style: Toast.Style.Success,
+            title: t("taskCompletion.taskCompletedSuccessTitle"),
+            message: t("taskCompletion.taskCompletedSuccessMessage", { title: task.title }),
+          });
+          pop();
+        }),
+      ),
+      Effect.catchAll((e) =>
+        Effect.sync(() => {
+          showToast({
+            style: Toast.Style.Failure,
+            title: t("taskCompletion.taskCompletionFailedTitle"),
+            message: e.message,
+          });
+        }),
+      ),
+    );
+
     try {
-      const params: FinishTaskParams = {
-        taskId: task.id,
-        currentConsumed: values.currentConsumed,
-        consumed: values.consumed,
-        assignedTo: values.assignedTo || task.assignedTo,
-        realStarted: values.realStarted,
-        finishedDate: values.finishedDate,
-        status: "done",
-        uid: formUid,
-        comment: values.comment,
-      };
-
-      logger.debug("FinishTaskForm.tsx ~ onSubmit ~ params:", params);
-
-      await finishTask(params);
-
-      showToast({
-        style: Toast.Style.Success,
-        title: t("taskCompletion.taskCompletedSuccessTitle"),
-        message: t("taskCompletion.taskCompletedSuccessMessage", { title: task.title }),
-      });
-
-      pop();
-    } catch (error) {
-      logger.error("Error finishing task:", error instanceof Error ? error : String(error));
-
-      // 检查是否是会话过期错误
-      if (error instanceof SessionExpiredError) {
-        showToast({
-          style: Toast.Style.Failure,
-          title: t("errors.sessionExpired"),
-          message: t("errors.sessionExpiredAction"),
-        });
-      } else {
-        showToast({
-          style: Toast.Style.Failure,
-          title: t("taskCompletion.taskCompletionFailedTitle"),
-          message: error instanceof Error ? error.message : t("errors.unknownError"),
-        });
-      }
+      await Effect.runPromise(program);
     } finally {
       setIsLoading(false);
     }

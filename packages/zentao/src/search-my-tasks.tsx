@@ -1,6 +1,7 @@
 import { Action, ActionPanel, Color, getPreferenceValues, Icon, List, showToast, Toast } from "@raycast/api";
 import { useCachedState } from "@raycast/utils";
 import dayjs from "dayjs";
+import { Effect } from "effect";
 import { CircularBuffer } from "mnemonist";
 import { alphabetical, sift, unique } from "radash";
 import { useEffect, useMemo, useState } from "react";
@@ -13,9 +14,8 @@ import { getPriorityColor, getPriorityIcon, getPriorityLabel } from "./constants
 import { getStatusIconConfig, TaskStatus } from "./constants/status";
 import { useT } from "./hooks/useT";
 import { Task } from "./types/task";
-import { SessionExpiredError } from "./utils/error";
+import { withAutoRetry } from "./utils/autoRetry";
 import { searchTasks } from "./utils/fuseSearch";
-import { logger } from "./utils/logger";
 import { slice } from "./utils/slice";
 import { fetchTasksFromZentao } from "./utils/taskService";
 
@@ -46,35 +46,33 @@ export default function Command() {
   };
 
   const fetchTasks = async () => {
+    setIsLoading(true);
+
+    const program = fetchTasksFromZentao().pipe(
+      withAutoRetry(),
+      Effect.tap((parsedTasks) =>
+        Effect.sync(() => {
+          setTasks(parsedTasks);
+          showToast({
+            style: Toast.Style.Success,
+            title: t("taskList.connectedToZentao"),
+            message: t("taskList.foundTasks", { count: parsedTasks.length }),
+          });
+        }),
+      ),
+      Effect.catchAll((e) =>
+        Effect.sync(() => {
+          showToast({
+            style: Toast.Style.Failure,
+            title: t("taskList.failedToFetchTasks"),
+            message: e.message,
+          });
+        }),
+      ),
+    );
+
     try {
-      setIsLoading(true);
-
-      const parsedTasks = await fetchTasksFromZentao();
-
-      showToast({
-        style: Toast.Style.Success,
-        title: t("taskList.connectedToZentao"),
-        message: t("taskList.foundTasks", { count: parsedTasks.length }),
-      });
-
-      setTasks(parsedTasks);
-    } catch (error) {
-      logger.error("Error fetching tasks:", error instanceof Error ? error : String(error));
-
-      // 检查是否是会话过期错误
-      if (error instanceof SessionExpiredError) {
-        return showToast({
-          style: Toast.Style.Failure,
-          title: t("errors.sessionExpired"),
-          message: t("errors.sessionExpiredAction"),
-        });
-      }
-
-      showToast({
-        style: Toast.Style.Failure,
-        title: t("taskList.failedToFetchTasks"),
-        message: error instanceof Error ? error.message : t("errors.unknownError"),
-      });
+      await Effect.runPromise(program);
     } finally {
       setIsLoading(false);
     }
