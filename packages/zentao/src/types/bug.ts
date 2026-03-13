@@ -13,13 +13,13 @@ export enum BugStatus {
 /** Bug严重程度枚举 */
 export enum BugSeverity {
   /** 轻微 */
-  MINOR = "1",
+  MINOR = "4",
   /** 一般 */
-  NORMAL = "2",
+  NORMAL = "3",
   /** 严重 */
-  MAJOR = "3",
+  MAJOR = "2",
   /** 关键 */
-  CRITICAL = "4",
+  CRITICAL = "1",
 }
 
 /** Bug类型枚举 */

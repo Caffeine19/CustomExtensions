@@ -208,7 +208,7 @@ export default function Command() {
         key={bug.id}
         icon={getBugStatusIconConfig(bug.status)}
         title={bug.title}
-        subtitle={bug.product}
+        subtitle={selectedProduct === "all" ? bug.product : undefined}
         accessories={[
           ...(bug.deadline
             ? [
