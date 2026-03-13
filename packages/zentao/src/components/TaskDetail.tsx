@@ -1,11 +1,12 @@
 import { Action, ActionPanel, Detail, getPreferenceValues, Icon, showToast, Toast } from "@raycast/api";
+import { Effect } from "effect";
 import { useEffect, useState } from "react";
 
 import { getPriorityColor, getPriorityLabel } from "../constants/priority";
 import { getStatusColor, getStatusLabel, TaskStatus } from "../constants/status";
 import { useT } from "../hooks/useT";
 import { Task } from "../types/task";
-import { logger } from "../utils/logger";
+import { withAutoRetry } from "../utils/autoRetry";
 import { fetchTaskDetail } from "../utils/taskService";
 import { FinishTaskForm } from "./FinishTaskForm";
 import { SessionRefreshAction } from "./SessionRefreshAction";
@@ -24,30 +25,39 @@ export function TaskDetail({ task }: TaskDetailProps) {
 
   /** 获取任务详细信息 */
   const loadTaskDetail = async () => {
+    setIsLoading(true);
+
+    showToast({
+      style: Toast.Style.Animated,
+      title: t("taskDetails.loadingTaskDetail"),
+      message: t("taskDetails.pleaseWait"),
+    });
+
+    const program = fetchTaskDetail(task.id).pipe(
+      withAutoRetry(),
+      Effect.tap((detailedTask) =>
+        Effect.sync(() => {
+          setTaskDetail(detailedTask);
+          showToast({
+            style: Toast.Style.Success,
+            title: t("taskDetails.loadTaskDetailSuccess"),
+            message: t("taskDetails.taskDetailLoaded"),
+          });
+        }),
+      ),
+      Effect.catchAll((e) =>
+        Effect.sync(() => {
+          showToast({
+            style: Toast.Style.Failure,
+            title: t("taskDetails.loadTaskDetailFailed"),
+            message: e.message,
+          });
+        }),
+      ),
+    );
+
     try {
-      setIsLoading(true);
-
-      showToast({
-        style: Toast.Style.Animated,
-        title: t("taskDetails.loadingTaskDetail"),
-        message: t("taskDetails.pleaseWait"),
-      });
-
-      const detailedTask = await fetchTaskDetail(task.id);
-      setTaskDetail(detailedTask);
-
-      showToast({
-        style: Toast.Style.Success,
-        title: t("taskDetails.loadTaskDetailSuccess"),
-        message: t("taskDetails.taskDetailLoaded"),
-      });
-    } catch (error) {
-      logger.error("Error loading task detail:", error instanceof Error ? error : String(error));
-      showToast({
-        style: Toast.Style.Failure,
-        title: t("taskDetails.loadTaskDetailFailed"),
-        message: error instanceof Error ? error.message : t("errors.unknownError"),
-      });
+      await Effect.runPromise(program);
     } finally {
       setIsLoading(false);
     }

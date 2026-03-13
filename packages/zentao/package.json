@@ -80,6 +80,7 @@
     "@raycast/utils": "^1.17.0",
     "cheerio": "^1.1.2",
     "dayjs": "^1.11.13",
+    "effect": "^3.19.19",
     "fuse.js": "^7.1.0",
     "i18next": "^25.3.2",
     "mnemonist": "^0.40.3",

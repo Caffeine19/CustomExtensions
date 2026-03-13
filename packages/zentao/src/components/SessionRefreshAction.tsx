@@ -1,7 +1,7 @@
 import { Action, Icon, showToast, Toast } from "@raycast/api";
+import { Effect } from "effect";
 
 import { useT } from "../hooks/useT";
-import { logger } from "../utils/logger";
 import { reLoginUser } from "../utils/loginService";
 
 interface SessionRefreshActionProps {
@@ -15,31 +15,36 @@ export function SessionRefreshAction({ onRefreshSuccess }: SessionRefreshActionP
 
   /** 处理会话刷新操作 */
   const handleRefreshSession = async () => {
-    try {
-      showToast({
-        style: Toast.Style.Animated,
-        title: t("sessionRefresh.refreshingSession"),
-        message: t("sessionRefresh.pleaseWait"),
-      });
+    const program = reLoginUser().pipe(
+      Effect.tap(() =>
+        Effect.promise(() =>
+          showToast({
+            style: Toast.Style.Success,
+            title: t("sessionRefresh.sessionRefreshSuccess"),
+            message: t("sessionRefresh.sessionRefreshSuccessDescription"),
+          }),
+        ),
+      ),
+      Effect.tapError((e) =>
+        Effect.promise(() =>
+          showToast({
+            style: Toast.Style.Failure,
+            title: t("sessionRefresh.sessionRefreshFailed"),
+            message: e.message,
+          }),
+        ),
+      ),
+      Effect.tap(() => Effect.promise(async () => onRefreshSuccess?.())),
+      Effect.catchAll(() => Effect.void),
+    );
 
-      await reLoginUser();
+    showToast({
+      style: Toast.Style.Animated,
+      title: t("sessionRefresh.refreshingSession"),
+      message: t("sessionRefresh.pleaseWait"),
+    });
 
-      showToast({
-        style: Toast.Style.Success,
-        title: t("sessionRefresh.sessionRefreshSuccess"),
-        message: t("sessionRefresh.sessionRefreshSuccessDescription"),
-      });
-
-      // 刷新成功后执行回调
-      onRefreshSuccess?.();
-    } catch (error) {
-      logger.error("Error during manual session refresh:", error instanceof Error ? error : String(error));
-      showToast({
-        style: Toast.Style.Failure,
-        title: t("sessionRefresh.sessionRefreshFailed"),
-        message: error instanceof Error ? error.message : t("errors.unknownError"),
-      });
-    }
+    await Effect.runPromise(program);
   };
 
   return (
