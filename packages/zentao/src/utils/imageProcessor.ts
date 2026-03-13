@@ -27,37 +27,31 @@ const convertImageToBase64 = (imageUrl: string): Effect.Effect<string> =>
               "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
           },
         }),
-      catch: (e) => e,
+      catch: () => new Error(`Failed to fetch image: ${imageUrl}`),
     });
 
     if (!response.ok) {
       logger.warn(`Failed to fetch image: ${imageUrl}, status: ${response.status}`);
-      return yield* Effect.fail(`[📷 图片链接](${imageUrl})`);
+      return `[📷 图片链接](${imageUrl})`;
     }
 
     // 检查响应的content-type，确保是图片而不是HTML
     const contentType = response.headers.get("content-type") || "";
     if (!contentType.startsWith("image/")) {
       logger.warn(`Response is not an image: ${imageUrl}, content-type: ${contentType}`);
-      return yield* Effect.fail(`[📷 图片链接](${imageUrl})`);
+      return `[📷 图片链接](${imageUrl})`;
     }
 
     const arrayBuffer = yield* Effect.tryPromise({
       try: () => response.arrayBuffer(),
-      catch: (e) => e,
+      catch: () => new Error(`Failed to read image buffer: ${imageUrl}`),
     });
 
     const base64 = Buffer.from(arrayBuffer).toString("base64");
     return `data:${contentType};base64,${base64}`;
   }).pipe(
-    Effect.catchAll((fallback) => {
-      if (typeof fallback === "string") {
-        return Effect.succeed(fallback);
-      }
-      logger.error(
-        `Error converting image to base64: ${imageUrl}`,
-        fallback instanceof Error ? fallback : String(fallback),
-      );
+    Effect.catchAll((e) => {
+      logger.error(`Error converting image to base64: ${imageUrl}`, e instanceof Error ? e : String(e));
       return Effect.succeed(`[📷 图片链接](${imageUrl})`);
     }),
   );

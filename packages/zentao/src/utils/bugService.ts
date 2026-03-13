@@ -4,7 +4,6 @@ import { Effect } from "effect";
 
 import { TaskPriority } from "../constants/priority";
 import { BugDetail, BugListItem, BugResolution, BugSeverity, BugStatus, BugType } from "../types/bug";
-import { withAutoRetry } from "./autoRetry";
 import { HtmlParseError, HttpError, SessionExpiredError } from "./error";
 import { processImages } from "./imageProcessor";
 import { logger } from "./logger";
@@ -720,17 +719,3 @@ export const fetchBugDetail = (
     console.log("🚀 ~ bugService.ts ~ fetchBugDetail ~ parsedBugDetail:", parsedBugDetail);
     return parsedBugDetail;
   });
-
-/**
- * 从禅道系统获取Bug列表（带自动重试）
- *
- * @deprecated 推荐在调用处使用 `fetchBugsFromZentao().pipe(withAutoRetry())` 代替
- */
-export const fetchBugsFromZentaoWithRetry = () => fetchBugsFromZentao().pipe(withAutoRetry());
-
-/**
- * 从禅道系统获取Bug详情（带自动重试）
- *
- * @deprecated 推荐在调用处使用 `fetchBugDetail(bugId).pipe(withAutoRetry())` 代替
- */
-export const fetchBugDetailWithRetry = (bugId: string) => fetchBugDetail(bugId).pipe(withAutoRetry());
