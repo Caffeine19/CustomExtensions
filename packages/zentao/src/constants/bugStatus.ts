@@ -1,6 +1,6 @@
 import { Color, Icon } from "@raycast/api";
 
-import { BugStatus } from "../types/bug";
+import { BugStatus } from "@/types/bug";
 
 /** Bug状态图标配置映射 */
 export const BUG_STATUS_ICON_CONFIGS = {

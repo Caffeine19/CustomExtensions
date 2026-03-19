@@ -1,5 +1,5 @@
-import { TaskPriority } from "../constants/priority";
-import { TaskStatus } from "../constants/status";
+import { TaskPriority } from "@/constants/taskPriority";
+import { TaskStatus } from "@/constants/taskStatus";
 
 /** 禅道 任务 对象 */
 export interface Task {

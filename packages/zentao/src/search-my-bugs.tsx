@@ -1,46 +1,28 @@
-import { Action, ActionPanel, getPreferenceValues, Icon, List, showToast, Toast } from "@raycast/api";
+import { Action, ActionPanel, Icon, List, showToast, Toast } from "@raycast/api";
 import { useCachedState } from "@raycast/utils";
 import dayjs from "dayjs";
+import { Effect } from "effect";
 import { CircularBuffer } from "mnemonist";
 import { alphabetical, sift, unique } from "radash";
 import { useEffect, useMemo, useState } from "react";
 
-import { BugDetail } from "./components/BugDetail";
-import { SessionRefreshAction } from "./components/SessionRefreshAction";
-import { getBugSeverityColor, getBugSeverityIcon, getBugSeverityLabel } from "./constants/bugSeverity";
-import { getBugStatusIconConfig } from "./constants/bugStatus";
-import { TAILWIND_COLORS } from "./constants/colors";
-import { CACHE_KEYS } from "./constants/key";
-import { getPriorityColor, getPriorityIcon, getPriorityLabel } from "./constants/priority";
-import { useT } from "./hooks/useT";
-import { BugListItem, BugStatus } from "./types/bug";
-import { fetchBugsFromZentao } from "./utils/bugService";
-import { SessionExpiredError } from "./utils/error";
-import { searchBugs } from "./utils/fuseSearch";
-import { logger } from "./utils/logger";
-import { slice } from "./utils/slice";
-
-type SortOrder =
-  | "none"
-  | "date-asc"
-  | "date-desc"
-  | "priority-asc"
-  | "priority-desc"
-  | "status-asc"
-  | "status-desc"
-  | "severity-asc"
-  | "severity-desc"
-  | "name";
+import { BugListItem as BugListItemComponent } from "@/components/BugListItem";
+import { SessionRefreshAction } from "@/components/SessionRefreshAction";
+import { CACHE_KEYS } from "@/constants/key";
+import { useT } from "@/hooks/useT";
+import { fetchBugsFromZentao } from "@/service/bugService";
+import { BugListItem, BugStatus } from "@/types/bug";
+import { SortOrder } from "@/types/sortOrder";
+import { withAutoRetry } from "@/utils/autoRetry";
+import { searchBugs } from "@/utils/fuseSearch";
 
 export default function Command() {
-  const preferences = getPreferenceValues<Preferences>();
-
   const { t } = useT();
 
   const [bugs, setBugs] = useCachedState<BugListItem[]>(CACHE_KEYS.BUGS, []);
 
   const [isLoading, setIsLoading] = useState(false);
-  const [sortOrder, setSortOrder] = useState<SortOrder>("priority-asc");
+  const [sortOrder, setSortOrder] = useCachedState<SortOrder>(CACHE_KEYS.BUG_SORT_ORDER, "name");
 
   const [selectedProduct, setSelectedProduct] = useCachedState<string>(CACHE_KEYS.SELECTED_PRODUCT, "all");
   const [pinnedBugIds, setPinnedBugIds] = useCachedState<string[]>(CACHE_KEYS.PINNED_BUGS, []);
@@ -59,35 +41,33 @@ export default function Command() {
   };
 
   const fetchBugs = async () => {
+    setIsLoading(true);
+
+    const program = fetchBugsFromZentao().pipe(
+      withAutoRetry(),
+      Effect.tap((parsedBugs) =>
+        Effect.sync(() => {
+          setBugs(parsedBugs);
+          showToast({
+            style: Toast.Style.Success,
+            title: t("bugList.connectedToZentao"),
+            message: t("bugList.foundBugs", { count: parsedBugs.length }),
+          });
+        }),
+      ),
+      Effect.catchAll((e) =>
+        Effect.sync(() => {
+          showToast({
+            style: Toast.Style.Failure,
+            title: t("bugList.failedToFetchBugs"),
+            message: e.message,
+          });
+        }),
+      ),
+    );
+
     try {
-      setIsLoading(true);
-
-      const parsedBugs = await fetchBugsFromZentao();
-
-      showToast({
-        style: Toast.Style.Success,
-        title: t("bugList.connectedToZentao"),
-        message: t("bugList.foundBugs", { count: parsedBugs.length }),
-      });
-
-      setBugs(parsedBugs);
-    } catch (error) {
-      logger.error("Error fetching bugs:", error instanceof Error ? error : String(error));
-
-      // 检查是否是会话过期错误
-      if (error instanceof SessionExpiredError) {
-        showToast({
-          style: Toast.Style.Failure,
-          title: t("errors.sessionExpired"),
-          message: t("errors.sessionExpiredAction"),
-        });
-      } else {
-        showToast({
-          style: Toast.Style.Failure,
-          title: t("bugList.failedToFetchBugs"),
-          message: error instanceof Error ? error.message : t("errors.unknownError"),
-        });
-      }
+      await Effect.runPromise(program);
     } finally {
       setIsLoading(false);
     }
@@ -201,133 +181,18 @@ export default function Command() {
     return sortedBugs.filter((b) => !pinnedBugIds.includes(b.id));
   }, [sortedBugs, pinnedBugIds]);
 
-  const renderBugItem = (bug: BugListItem, isOverdue: boolean | string) => {
+  const renderBugItem = (bug: BugListItem, selectedProduct: string, isOverdue: boolean | string) => {
     const isPinned = pinnedBugIds.includes(bug.id);
     return (
-      <List.Item
+      <BugListItemComponent
         key={bug.id}
-        icon={getBugStatusIconConfig(bug.status)}
-        title={bug.title}
-        subtitle={selectedProduct === "all" ? bug.product : undefined}
-        accessories={[
-          ...(bug.deadline
-            ? [
-                {
-                  tag: {
-                    value: bug.deadline,
-                    color: isOverdue ? TAILWIND_COLORS.red[400] : TAILWIND_COLORS.gray[200],
-                  },
-                },
-              ]
-            : []),
-          {
-            icon: {
-              source: getBugSeverityIcon(bug.severity),
-              tintColor: getBugSeverityColor(bug.severity),
-            },
-            tooltip: getBugSeverityLabel(bug.severity),
-          },
-          {
-            icon: {
-              source: getPriorityIcon(bug.priority),
-              tintColor: getPriorityColor(bug.priority),
-            },
-            tooltip: getPriorityLabel(bug.priority),
-          },
-        ]}
-        actions={
-          <ActionPanel>
-            <Action.Push title={t("bugActions.viewBugDetails")} icon={Icon.Eye} target={<BugDetail bug={bug} />} />
-
-            <Action.OpenInBrowser
-              title={t("bugActions.openInZentao")}
-              url={`${preferences.zentaoUrl}/bug-view-${bug.id}.html`}
-            />
-
-            <Action
-              title={isPinned ? t("bugActions.unpinBug") : t("bugActions.pinBug")}
-              onAction={() => togglePinBug(bug.id)}
-              icon={isPinned ? Icon.PinDisabled : Icon.Pin}
-              shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
-            />
-
-            <Action.CopyToClipboard
-              title={t("bugActions.copyBugId")}
-              content={bug.id}
-              icon={Icon.Clipboard}
-              shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
-            />
-
-            <Action.CopyToClipboard
-              title={t("bugActions.copyBugUrl")}
-              content={`${preferences.zentaoUrl}/bug-view-${bug.id}.html`}
-              icon={Icon.Link}
-              shortcut={{ modifiers: ["cmd", "opt"], key: "c" }}
-            />
-
-            <SessionRefreshAction onRefreshSuccess={handleRefreshSession} />
-
-            <ActionPanel.Section title={t("sortActions.sortByDate")}>
-              <Action
-                title={t("sortActions.sortByDateEarliestFirst")}
-                onAction={() => setSortOrder("date-asc")}
-                icon={Icon.ArrowUp}
-              />
-              <Action
-                title={t("sortActions.sortByDateLatestFirst")}
-                onAction={() => setSortOrder("date-desc")}
-                icon={Icon.ArrowDown}
-              />
-            </ActionPanel.Section>
-
-            <ActionPanel.Section title={t("sortActions.sortByPriority")}>
-              <Action
-                title={t("sortActions.sortByPriorityHighToLow")}
-                onAction={() => setSortOrder("priority-asc")}
-                icon={Icon.ArrowUp}
-              />
-              <Action
-                title={t("sortActions.sortByPriorityLowToHigh")}
-                onAction={() => setSortOrder("priority-desc")}
-                icon={Icon.ArrowDown}
-              />
-            </ActionPanel.Section>
-
-            <ActionPanel.Section title={t("sortActions.sortBySeverity")}>
-              <Action
-                title={t("sortActions.sortBySeverityHighToLow")}
-                onAction={() => setSortOrder("severity-asc")}
-                icon={Icon.ArrowUp}
-              />
-              <Action
-                title={t("sortActions.sortBySeverityLowToHigh")}
-                onAction={() => setSortOrder("severity-desc")}
-                icon={Icon.ArrowDown}
-              />
-            </ActionPanel.Section>
-
-            <ActionPanel.Section title={t("sortActions.sortByStatus")}>
-              <Action
-                title={t("sortActions.sortByStatusActiveFirst")}
-                onAction={() => setSortOrder("status-asc")}
-                icon={Icon.ArrowUp}
-              />
-              <Action
-                title={t("sortActions.sortByStatusCompletedFirst")}
-                onAction={() => setSortOrder("status-desc")}
-                icon={Icon.ArrowDown}
-              />
-            </ActionPanel.Section>
-
-            <ActionPanel.Section title={t("sortActions.sortByName")}>
-              <Action title={t("sortActions.sortByName")} onAction={() => setSortOrder("name")} icon={Icon.Text} />
-            </ActionPanel.Section>
-
-            <ActionPanel.Section title={t("sortActions.resetSort")}>
-              <Action title={t("sortActions.resetSort")} onAction={() => setSortOrder("none")} icon={Icon.Minus} />
-            </ActionPanel.Section>
-          </ActionPanel>
-        }
+        bug={bug}
+        selectedProduct={selectedProduct}
+        isOverdue={isOverdue}
+        isPinned={isPinned}
+        onTogglePin={togglePinBug}
+        onSortOrderChange={setSortOrder}
+        onRefreshSession={handleRefreshSession}
       />
     );
   };
@@ -353,7 +218,7 @@ export default function Command() {
             return (
               <List.Dropdown.Item
                 key={product.name}
-                title={`${slice(product.name, 14)} ( ${product.count} )`}
+                title={`${product.name} ( ${product.count} )`}
                 value={product.name}
               />
             );
@@ -383,7 +248,7 @@ export default function Command() {
                   !(dayjs(bug.deadline).format("MM DD") === dayjs().format("MM DD")) &&
                   dayjs(bug.deadline).year(dayjs().year()).isBefore(dayjs());
 
-                return renderBugItem(bug, isOverdue);
+                return renderBugItem(bug, selectedProduct, isOverdue);
               })}
             </List.Section>
           )}
@@ -395,7 +260,7 @@ export default function Command() {
                 !(dayjs(bug.deadline).format("MM DD") === dayjs().format("MM DD")) &&
                 dayjs(bug.deadline).year(dayjs().year()).isBefore(dayjs());
 
-              return renderBugItem(bug, isOverdue);
+              return renderBugItem(bug, selectedProduct, isOverdue);
             })}
           </List.Section>
         </>

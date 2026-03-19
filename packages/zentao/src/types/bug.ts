@@ -1,4 +1,4 @@
-import { TaskPriority } from "../constants/priority";
+import { TaskPriority } from "@/constants/taskPriority";
 
 /** Bug状态枚举 */
 export enum BugStatus {

@@ -1,15 +1,16 @@
 import { Action, ActionPanel, Detail, getPreferenceValues, Icon, showToast, Toast } from "@raycast/api";
+import { Effect } from "effect";
 import { useEffect, useMemo, useState } from "react";
 
-import { getBugSeverityColor, getBugSeverityLabel } from "../constants/bugSeverity";
-import { getBugStatusColor, getBugStatusLabel } from "../constants/bugStatus";
-import { getBugTypeColor, getBugTypeLabel } from "../constants/bugType";
-import { getPriorityColor, getPriorityLabel } from "../constants/priority";
-import { useT } from "../hooks/useT";
-import { BugDetail as BugDetailType, BugListItem } from "../types/bug";
-import { fetchBugDetail } from "../utils/bugService";
-import { logger } from "../utils/logger";
-import { SessionRefreshAction } from "./SessionRefreshAction";
+import { SessionRefreshAction } from "@/components/SessionRefreshAction";
+import { getBugSeverityColor, getBugSeverityLabel } from "@/constants/bugSeverity";
+import { getBugStatusColor, getBugStatusLabel } from "@/constants/bugStatus";
+import { getBugTypeColor, getBugTypeLabel } from "@/constants/bugType";
+import { getPriorityColor, getPriorityLabel } from "@/constants/taskPriority";
+import { useT } from "@/hooks/useT";
+import { fetchBugDetail } from "@/service/bugService";
+import { BugDetail as BugDetailType, BugListItem } from "@/types/bug";
+import { withAutoRetry } from "@/utils/autoRetry";
 
 interface BugDetailProps {
   bug: BugListItem;
@@ -41,30 +42,39 @@ export function BugDetail({ bug: { id } }: BugDetailProps) {
 
   /** 获取Bug详细信息 */
   const loadBugDetail = async () => {
+    setIsLoading(true);
+
+    showToast({
+      style: Toast.Style.Animated,
+      title: t("bugDetails.loadingBugDetail"),
+      message: t("bugDetails.pleaseWait"),
+    });
+
+    const program = fetchBugDetail(id).pipe(
+      withAutoRetry(),
+      Effect.tap((detailedBug) =>
+        Effect.sync(() => {
+          setBugDetail(detailedBug);
+          showToast({
+            style: Toast.Style.Success,
+            title: t("bugDetails.loadBugDetailSuccess"),
+            message: t("bugDetails.bugDetailLoaded"),
+          });
+        }),
+      ),
+      Effect.catchAll((e) =>
+        Effect.sync(() => {
+          showToast({
+            style: Toast.Style.Failure,
+            title: t("bugDetails.loadBugDetailFailed"),
+            message: e.message,
+          });
+        }),
+      ),
+    );
+
     try {
-      setIsLoading(true);
-
-      showToast({
-        style: Toast.Style.Animated,
-        title: t("bugDetails.loadingBugDetail"),
-        message: t("bugDetails.pleaseWait"),
-      });
-
-      const detailedBug = await fetchBugDetail(id);
-      setBugDetail(detailedBug);
-
-      showToast({
-        style: Toast.Style.Success,
-        title: t("bugDetails.loadBugDetailSuccess"),
-        message: t("bugDetails.bugDetailLoaded"),
-      });
-    } catch (error) {
-      logger.error("Error loading bug detail:", error instanceof Error ? error : String(error));
-      showToast({
-        style: Toast.Style.Failure,
-        title: t("bugDetails.loadBugDetailFailed"),
-        message: error instanceof Error ? error.message : t("errors.unknownError"),
-      });
+      await Effect.runPromise(program);
     } finally {
       setIsLoading(false);
     }
@@ -220,12 +230,6 @@ ${bugDetail.notifyEmail ? `**${t("bugDetails.notifyEmail")}:** ${bugDetail.notif
                 <Detail.Metadata.Separator />
               </>
             )}
-
-            <Detail.Metadata.Link
-              title={t("bugDetails.openInZentao")}
-              target={`${preferences.zentaoUrl}/bug-view-${id}.html`}
-              text={t("bugDetails.viewBugDetails")}
-            />
           </Detail.Metadata>
         ) : undefined
       }

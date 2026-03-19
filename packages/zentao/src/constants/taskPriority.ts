@@ -1,6 +1,6 @@
 import { Icon } from "@raycast/api";
 
-import { TAILWIND_COLORS } from "./colors";
+import { TAILWIND_COLORS } from "@/constants/colors";
 
 /** 任务优先级枚举 注意：数字越小，优先级越高（1是最高优先级） */
 export enum TaskPriority {

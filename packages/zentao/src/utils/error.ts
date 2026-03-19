@@ -1,3 +1,5 @@
+import { Data } from "effect";
+
 /** 登录响应结果接口 */
 export interface LoginResult {
   result: string;
@@ -5,43 +7,37 @@ export interface LoginResult {
   locate?: string;
 }
 
-/** 会话过期异常类 */
-export class SessionExpiredError extends Error {
-  constructor(message = "登录会话已过期，请重新登录") {
-    super(message);
-    this.name = "SessionExpiredError";
-  }
-}
+/** 会话过期错误 */
+export class SessionExpiredError extends Data.TaggedError("SessionExpiredError")<{
+  readonly message: string;
+}> {}
 
-/** 登录失败异常类 */
-export class LoginFailedError extends Error {
-  public readonly loginResult?: LoginResult;
+/** 登录失败错误 */
+export class LoginFailedError extends Data.TaggedError("LoginFailedError")<{
+  readonly message: string;
+  readonly loginResult?: LoginResult;
+}> {}
 
-  constructor(message = "登录失败", loginResult?: LoginResult) {
-    super(message);
-    this.name = "LoginFailedError";
-    this.loginResult = loginResult;
-  }
-}
+/** 登录响应解析失败错误 */
+export class LoginResponseParseError extends Data.TaggedError("LoginResponseParseError")<{
+  readonly message: string;
+  readonly responseText: string;
+}> {}
 
-/** 登录响应解析失败异常类 */
-export class LoginResponseParseError extends Error {
-  public readonly responseText: string;
+/** 会话刷新错误 */
+export class SessionRefreshError extends Data.TaggedError("SessionRefreshError")<{
+  readonly message: string;
+  readonly cause?: unknown;
+}> {}
 
-  constructor(message = "解析登录响应失败", responseText = "") {
-    super(message);
-    this.name = "LoginResponseParseError";
-    this.responseText = responseText;
-  }
-}
+/** HTTP 请求错误 */
+export class HttpError extends Data.TaggedError("HttpError")<{
+  readonly status: number;
+  readonly message: string;
+}> {}
 
-/** 会话刷新异常类 */
-export class SessionRefreshError extends Error {
-  public readonly cause?: Error;
-
-  constructor(message = "会话刷新失败", cause?: Error) {
-    super(message);
-    this.name = "SessionRefreshError";
-    this.cause = cause;
-  }
-}
+/** HTML 解析错误 */
+export class HtmlParseError extends Data.TaggedError("HtmlParseError")<{
+  readonly message: string;
+  readonly cause?: unknown;
+}> {}

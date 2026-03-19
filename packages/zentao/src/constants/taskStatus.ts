@@ -1,6 +1,6 @@
 import { Color, Icon } from "@raycast/api";
 
-import { TAILWIND_COLORS } from "./colors";
+import { TAILWIND_COLORS } from "@/constants/colors";
 
 /** 任务状态枚举 */
 export enum TaskStatus {

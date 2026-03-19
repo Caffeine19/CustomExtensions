@@ -2,7 +2,7 @@
 import "i18next";
 
 // import all namespaces (for the default language, only)
-import { defaultNS, resources } from "../i18n";
+import { defaultNS, resources } from "@/i18n";
 
 declare module "i18next" {
   // Extend CustomTypeOptions

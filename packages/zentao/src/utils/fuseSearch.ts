@@ -1,8 +1,8 @@
 import Fuse from "fuse.js";
 import PinyinMatch from "pinyin-match";
 
-import { BugListItem } from "../types/bug";
-import { Task } from "../types/task";
+import { BugListItem } from "@/types/bug";
+import { Task } from "@/types/task";
 
 /**
  * 搜索任务，支持模糊搜索和拼音搜索
