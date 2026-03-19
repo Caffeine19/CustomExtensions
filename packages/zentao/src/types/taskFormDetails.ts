@@ -1,4 +1,4 @@
-import { TeamMember } from "./teamMember";
+import { TeamMember } from "@/types/teamMember";
 
 /** 任务完成表单详情 */
 export interface TaskFormDetails {

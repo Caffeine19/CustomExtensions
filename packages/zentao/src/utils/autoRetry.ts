@@ -1,16 +1,16 @@
 import { showToast, Toast } from "@raycast/api";
 import { Effect } from "effect";
 
-import i18n from "../i18n";
+import i18n from "@/i18n";
+import { reLoginUser } from "@/service/loginService";
 import {
   HttpError,
   LoginFailedError,
   LoginResponseParseError,
   SessionExpiredError,
   SessionRefreshError,
-} from "./error";
-import { logger } from "./logger";
-import { reLoginUser } from "./loginService";
+} from "@/utils/error";
+import { logger } from "@/utils/logger";
 
 /** 重新登录可能产生的错误类型 */
 type ReloginErrors = LoginFailedError | LoginResponseParseError | SessionRefreshError | HttpError;
@@ -83,7 +83,7 @@ export const withAutoRetry =
           }
 
           // 重试一次原操作
-          return yield* effect as Effect.Effect<A, E | ReloginErrors>;
+          return yield* effect;
         }),
       ),
     ) as Effect.Effect<A, E | ReloginErrors>;

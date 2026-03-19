@@ -2,14 +2,14 @@ import { Action, ActionPanel, Detail, getPreferenceValues, Icon, showToast, Toas
 import { Effect } from "effect";
 import { useEffect, useState } from "react";
 
-import { getPriorityColor, getPriorityLabel } from "../constants/priority";
-import { getStatusColor, getStatusLabel, TaskStatus } from "../constants/status";
-import { useT } from "../hooks/useT";
-import { Task } from "../types/task";
-import { withAutoRetry } from "../utils/autoRetry";
-import { fetchTaskDetail } from "../utils/taskService";
-import { FinishTaskForm } from "./FinishTaskForm";
-import { SessionRefreshAction } from "./SessionRefreshAction";
+import { FinishTaskForm } from "@/components/FinishTaskForm";
+import { SessionRefreshAction } from "@/components/SessionRefreshAction";
+import { getPriorityColor, getPriorityLabel } from "@/constants/taskPriority";
+import { getStatusColor, getStatusLabel, TaskStatus } from "@/constants/taskStatus";
+import { useT } from "@/hooks/useT";
+import { fetchTaskDetail } from "@/service/taskService";
+import { Task } from "@/types/task";
+import { withAutoRetry } from "@/utils/autoRetry";
 
 interface TaskDetailProps {
   task: Task;

@@ -1,6 +1,6 @@
 import { Color, Icon } from "@raycast/api";
 
-import { BugSeverity } from "../types/bug";
+import { BugSeverity } from "@/types/bug";
 
 /** Bug严重程度图标映射 */
 export const BUG_SEVERITY_ICONS = {

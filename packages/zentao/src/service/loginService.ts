@@ -1,8 +1,8 @@
 import { getPreferenceValues } from "@raycast/api";
 import { Effect } from "effect";
 
-import { HttpError, LoginFailedError, LoginResponseParseError, LoginResult, SessionRefreshError } from "./error";
-import { logger } from "./logger";
+import { HttpError, LoginFailedError, LoginResponseParseError, LoginResult, SessionRefreshError } from "@/utils/error";
+import { logger } from "@/utils/logger";
 
 /**
  * 检查 HTML 响应是否表示会话已过期

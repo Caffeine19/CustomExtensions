@@ -1,7 +1,7 @@
 import { getPreferenceValues } from "@raycast/api";
 import { Effect } from "effect";
 
-import { logger } from "./logger";
+import { logger } from "@/utils/logger";
 
 /**
  * 将HTTP图片转换为base64数据URL

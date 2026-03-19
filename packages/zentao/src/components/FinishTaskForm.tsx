@@ -4,12 +4,12 @@ import { Effect } from "effect";
 import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 
-import { useT } from "../hooks/useT";
-import { Task } from "../types/task";
-import { TeamMember } from "../types/teamMember";
-import { withAutoRetry } from "../utils/autoRetry";
-import { fetchTaskFormDetails, finishTask, FinishTaskParams } from "../utils/taskService";
-import { SessionRefreshAction } from "./SessionRefreshAction";
+import { SessionRefreshAction } from "@/components/SessionRefreshAction";
+import { useT } from "@/hooks/useT";
+import { fetchTaskFormDetails, finishTask, FinishTaskParams } from "@/service/taskService";
+import { Task } from "@/types/task";
+import { TeamMember } from "@/types/teamMember";
+import { withAutoRetry } from "@/utils/autoRetry";
 
 /** 工作日常量 */
 const WORK_START_HOUR = 9; // 上班时间 09:00

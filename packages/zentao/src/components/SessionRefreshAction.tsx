@@ -1,8 +1,8 @@
 import { Action, Icon, showToast, Toast } from "@raycast/api";
 import { Effect } from "effect";
 
-import { useT } from "../hooks/useT";
-import { reLoginUser } from "../utils/loginService";
+import { useT } from "@/hooks/useT";
+import { reLoginUser } from "@/service/loginService";
 
 interface SessionRefreshActionProps {
   /** 刷新成功后的回调函数（可选） */

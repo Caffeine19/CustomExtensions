@@ -12,4 +12,8 @@ export const CACHE_KEYS = {
   PINNED_TASKS: "pinned-tasks",
   /** 置顶的BugID列表 */
   PINNED_BUGS: "pinned-bugs",
+  /** 任务列表排序方式 */
+  TASK_SORT_ORDER: "task-sort-order",
+  /** Bug列表排序方式 */
+  BUG_SORT_ORDER: "bug-sort-order",
 } as const;

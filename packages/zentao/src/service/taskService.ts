@@ -2,14 +2,14 @@ import { getPreferenceValues } from "@raycast/api";
 import * as cheerio from "cheerio";
 import { Effect } from "effect";
 
-import { TaskPriority } from "../constants/priority";
-import { TaskStatus } from "../constants/status";
-import { Task } from "../types/task";
-import { TaskFormDetails } from "../types/taskFormDetails";
-import { TeamMember } from "../types/teamMember";
-import { HtmlParseError, HttpError, SessionExpiredError } from "./error";
-import { logger } from "./logger";
-import { isSessionExpired } from "./loginService";
+import { TaskPriority } from "@/constants/taskPriority";
+import { TaskStatus } from "@/constants/taskStatus";
+import { isSessionExpired } from "@/service/loginService";
+import { Task } from "@/types/task";
+import { TaskFormDetails } from "@/types/taskFormDetails";
+import { TeamMember } from "@/types/teamMember";
+import { HtmlParseError, HttpError, SessionExpiredError } from "@/utils/error";
+import { logger } from "@/utils/logger";
 
 /**
  * 从 HTML 页面解析任务信息

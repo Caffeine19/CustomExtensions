@@ -2,15 +2,15 @@ import { Action, ActionPanel, Detail, getPreferenceValues, Icon, showToast, Toas
 import { Effect } from "effect";
 import { useEffect, useMemo, useState } from "react";
 
-import { getBugSeverityColor, getBugSeverityLabel } from "../constants/bugSeverity";
-import { getBugStatusColor, getBugStatusLabel } from "../constants/bugStatus";
-import { getBugTypeColor, getBugTypeLabel } from "../constants/bugType";
-import { getPriorityColor, getPriorityLabel } from "../constants/priority";
-import { useT } from "../hooks/useT";
-import { BugDetail as BugDetailType, BugListItem } from "../types/bug";
-import { withAutoRetry } from "../utils/autoRetry";
-import { fetchBugDetail } from "../utils/bugService";
-import { SessionRefreshAction } from "./SessionRefreshAction";
+import { SessionRefreshAction } from "@/components/SessionRefreshAction";
+import { getBugSeverityColor, getBugSeverityLabel } from "@/constants/bugSeverity";
+import { getBugStatusColor, getBugStatusLabel } from "@/constants/bugStatus";
+import { getBugTypeColor, getBugTypeLabel } from "@/constants/bugType";
+import { getPriorityColor, getPriorityLabel } from "@/constants/taskPriority";
+import { useT } from "@/hooks/useT";
+import { fetchBugDetail } from "@/service/bugService";
+import { BugDetail as BugDetailType, BugListItem } from "@/types/bug";
+import { withAutoRetry } from "@/utils/autoRetry";
 
 interface BugDetailProps {
   bug: BugListItem;
@@ -230,12 +230,6 @@ ${bugDetail.notifyEmail ? `**${t("bugDetails.notifyEmail")}:** ${bugDetail.notif
                 <Detail.Metadata.Separator />
               </>
             )}
-
-            <Detail.Metadata.Link
-              title={t("bugDetails.openInZentao")}
-              target={`${preferences.zentaoUrl}/bug-view-${id}.html`}
-              text={t("bugDetails.viewBugDetails")}
-            />
           </Detail.Metadata>
         ) : undefined
       }

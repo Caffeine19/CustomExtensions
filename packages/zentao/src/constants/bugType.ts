@@ -1,7 +1,7 @@
 import { Color, Icon } from "@raycast/api";
 
-import { BugType } from "../types/bug";
-import { TAILWIND_COLORS } from "./colors";
+import { TAILWIND_COLORS } from "@/constants/colors";
+import { BugType } from "@/types/bug";
 
 /** Bug类型标签映射 */
 export const BUG_TYPE_LABELS = {

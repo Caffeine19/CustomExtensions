@@ -2,12 +2,12 @@ import { getPreferenceValues } from "@raycast/api";
 import * as cheerio from "cheerio";
 import { Effect } from "effect";
 
-import { TaskPriority } from "../constants/priority";
-import { BugDetail, BugListItem, BugResolution, BugSeverity, BugStatus, BugType } from "../types/bug";
-import { HtmlParseError, HttpError, SessionExpiredError } from "./error";
-import { processImages } from "./imageProcessor";
-import { logger } from "./logger";
-import { isSessionExpired } from "./loginService";
+import { TaskPriority } from "@/constants/taskPriority";
+import { isSessionExpired } from "@/service/loginService";
+import { BugDetail, BugListItem, BugResolution, BugSeverity, BugStatus, BugType } from "@/types/bug";
+import { HtmlParseError, HttpError, SessionExpiredError } from "@/utils/error";
+import { processImages } from "@/utils/imageProcessor";
+import { logger } from "@/utils/logger";
 
 /** Bug 列表表格的列类型 */
 type BugColumnType =

@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Color, getPreferenceValues, Icon, List, showToast, Toast } from "@raycast/api";
+import { Action, ActionPanel, Icon, List, showToast, Toast } from "@raycast/api";
 import { useCachedState } from "@raycast/utils";
 import dayjs from "dayjs";
 import { Effect } from "effect";
@@ -6,29 +6,24 @@ import { CircularBuffer } from "mnemonist";
 import { alphabetical, sift, unique } from "radash";
 import { useEffect, useMemo, useState } from "react";
 
-import { SessionRefreshAction } from "./components/SessionRefreshAction";
-import { TaskDetail } from "./components/TaskDetail";
-import { TAILWIND_COLORS } from "./constants/colors";
-import { CACHE_KEYS } from "./constants/key";
-import { getPriorityColor, getPriorityIcon, getPriorityLabel } from "./constants/priority";
-import { getStatusIconConfig, TaskStatus } from "./constants/status";
-import { useT } from "./hooks/useT";
-import { Task } from "./types/task";
-import { withAutoRetry } from "./utils/autoRetry";
-import { searchTasks } from "./utils/fuseSearch";
-import { slice } from "./utils/slice";
-import { fetchTasksFromZentao } from "./utils/taskService";
-
-type SortOrder = "none" | "date-asc" | "date-desc" | "priority-asc" | "priority-desc" | "status-asc" | "status-desc";
+import { SortActions } from "@/components/actions/SortActions";
+import { SessionRefreshAction } from "@/components/SessionRefreshAction";
+import { TaskListItem as TaskListItemComponent } from "@/components/TaskListItem";
+import { CACHE_KEYS } from "@/constants/key";
+import { TaskStatus } from "@/constants/taskStatus";
+import { useT } from "@/hooks/useT";
+import { fetchTasksFromZentao } from "@/service/taskService";
+import { SortOrder } from "@/types/sortOrder";
+import { Task } from "@/types/task";
+import { withAutoRetry } from "@/utils/autoRetry";
+import { searchTasks } from "@/utils/fuseSearch";
 
 export default function Command() {
-  const preferences = getPreferenceValues<Preferences>();
-
   const { t } = useT();
 
   const [tasks, setTasks] = useCachedState<Task[]>(CACHE_KEYS.TASKS, []);
   const [isLoading, setIsLoading] = useState(false);
-  const [sortOrder, setSortOrder] = useState<SortOrder>("date-desc");
+  const [sortOrder, setSortOrder] = useCachedState<SortOrder>(CACHE_KEYS.TASK_SORT_ORDER, "date-desc");
   const [selectedProject, setSelectedProject] = useCachedState<string>(CACHE_KEYS.SELECTED_PROJECT, "all");
   const [pinnedTaskIds, setPinnedTaskIds] = useCachedState<string[]>(CACHE_KEYS.PINNED_TASKS, []);
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -181,103 +176,14 @@ export default function Command() {
   const renderTaskItem = (task: Task, isOverdue: boolean | string) => {
     const isPinned = pinnedTaskIds.includes(task.id);
     return (
-      <List.Item
+      <TaskListItemComponent
         key={task.id}
-        icon={getStatusIconConfig(task.status)}
-        title={task.title}
-        subtitle={task.project}
-        accessories={[
-          ...(isPinned ? [{ icon: { source: Icon.Pin, tintColor: Color.Red } }] : []),
-          ...(task.deadline
-            ? [
-                {
-                  tag: {
-                    value: task.deadline,
-                    color: isOverdue ? TAILWIND_COLORS.red[400] : TAILWIND_COLORS.gray[300],
-                  },
-                },
-              ]
-            : []),
-          {
-            icon: {
-              source: getPriorityIcon(task.priority),
-              tintColor: getPriorityColor(task.priority),
-            },
-            tooltip: getPriorityLabel(task.priority),
-          },
-        ]}
-        actions={
-          <ActionPanel>
-            <Action.Push title={t("taskActions.viewTaskDetails")} target={<TaskDetail task={task} />} icon={Icon.Eye} />
-            <Action
-              title={isPinned ? t("taskActions.unpinTask") : t("taskActions.pinTask")}
-              onAction={() => togglePinTask(task.id)}
-              icon={isPinned ? Icon.PinDisabled : Icon.Pin}
-              shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
-            />
-            <Action.OpenInBrowser
-              title={t("taskActions.openInZentao")}
-              url={`${preferences.zentaoUrl}/task-view-${task.id}.html`}
-              icon={Icon.Globe}
-            />
-            <Action.CopyToClipboard
-              title={t("taskActions.copyTaskId")}
-              content={task.id}
-              icon={Icon.Clipboard}
-              shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
-            />
-            <Action.CopyToClipboard
-              title={t("taskActions.copyTaskUrl")}
-              content={`${preferences.zentaoUrl}/task-view-${task.id}.html`}
-              icon={Icon.Link}
-              shortcut={{ modifiers: ["cmd", "opt"], key: "c" }}
-            />
-            <SessionRefreshAction onRefreshSuccess={handleRefreshSession} />
-
-            <ActionPanel.Section title={t("sortActions.sortByDate")}>
-              <Action
-                title={t("sortActions.sortByDateEarliestFirst")}
-                onAction={() => setSortOrder("date-asc")}
-                icon={Icon.ArrowUp}
-              />
-              <Action
-                title={t("sortActions.sortByDateLatestFirst")}
-                onAction={() => setSortOrder("date-desc")}
-                icon={Icon.ArrowDown}
-              />
-            </ActionPanel.Section>
-
-            <ActionPanel.Section title={t("sortActions.sortByPriority")}>
-              <Action
-                title={t("sortActions.sortByPriorityHighToLow")}
-                onAction={() => setSortOrder("priority-asc")}
-                icon={Icon.ArrowUp}
-              />
-              <Action
-                title={t("sortActions.sortByPriorityLowToHigh")}
-                onAction={() => setSortOrder("priority-desc")}
-                icon={Icon.ArrowDown}
-              />
-            </ActionPanel.Section>
-
-            <ActionPanel.Section title={t("sortActions.sortByStatus")}>
-              <Action
-                title={t("sortActions.sortByStatusActiveFirst")}
-                onAction={() => setSortOrder("status-asc")}
-                icon={Icon.ArrowUp}
-              />
-              <Action
-                title={t("sortActions.sortByStatusCompletedFirst")}
-                onAction={() => setSortOrder("status-desc")}
-                icon={Icon.ArrowDown}
-              />
-            </ActionPanel.Section>
-
-            <ActionPanel.Section title={t("sortActions.resetSort")}>
-              <Action title={t("sortActions.resetSort")} onAction={() => setSortOrder("none")} icon={Icon.Minus} />
-            </ActionPanel.Section>
-          </ActionPanel>
-        }
+        task={task}
+        isOverdue={isOverdue}
+        isPinned={isPinned}
+        onTogglePin={togglePinTask}
+        onSortOrderChange={setSortOrder}
+        onRefreshSession={handleRefreshSession}
       />
     );
   };
@@ -303,7 +209,7 @@ export default function Command() {
             return (
               <List.Dropdown.Item
                 key={project.name}
-                title={`${slice(project.name, 14)} ( ${project.count} )`}
+                title={`${project.name} ( ${project.count} )`}
                 value={project.name}
               />
             );
@@ -314,45 +220,7 @@ export default function Command() {
         <ActionPanel>
           <Action title={t("general.refresh")} onAction={fetchTasks} icon={Icon.ArrowClockwise} />
           <SessionRefreshAction onRefreshSuccess={handleRefreshSession} />
-          <ActionPanel.Section title={t("sortActions.sortByDate")}>
-            <Action
-              title={t("sortActions.sortByDateEarliestFirst")}
-              onAction={() => setSortOrder("date-asc")}
-              icon={Icon.ArrowUp}
-            />
-            <Action
-              title={t("sortActions.sortByDateLatestFirst")}
-              onAction={() => setSortOrder("date-desc")}
-              icon={Icon.ArrowDown}
-            />
-          </ActionPanel.Section>
-          <ActionPanel.Section title={t("sortActions.sortByPriority")}>
-            <Action
-              title={t("sortActions.sortByPriorityHighToLow")}
-              onAction={() => setSortOrder("priority-asc")}
-              icon={Icon.ArrowUp}
-            />
-            <Action
-              title={t("sortActions.sortByPriorityLowToHigh")}
-              onAction={() => setSortOrder("priority-desc")}
-              icon={Icon.ArrowDown}
-            />
-          </ActionPanel.Section>
-          <ActionPanel.Section title={t("sortActions.sortByStatus")}>
-            <Action
-              title={t("sortActions.sortByStatusActiveFirst")}
-              onAction={() => setSortOrder("status-asc")}
-              icon={Icon.ArrowUp}
-            />
-            <Action
-              title={t("sortActions.sortByStatusCompletedFirst")}
-              onAction={() => setSortOrder("status-desc")}
-              icon={Icon.ArrowDown}
-            />
-          </ActionPanel.Section>
-          <ActionPanel.Section title={t("sortActions.resetSort")}>
-            <Action title={t("sortActions.resetSort")} onAction={() => setSortOrder("none")} icon={Icon.Minus} />
-          </ActionPanel.Section>
+          <SortActions onSortOrderChange={setSortOrder} />
         </ActionPanel>
       }
     >
