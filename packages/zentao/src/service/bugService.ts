@@ -133,16 +133,16 @@ export const parseBugsFromHtml = (html: string): Effect.Effect<BugListItem[], Ht
         const severityElement = severityCell?.find(".label-severity");
         const severityDataValue = severityElement?.attr("data-severity");
         let severity: BugSeverity;
-        if (severityDataValue === "1") {
+        if (severityDataValue === "4") {
           severity = BugSeverity.MINOR;
-        } else if (severityDataValue === "2") {
-          severity = BugSeverity.NORMAL;
         } else if (severityDataValue === "3") {
+          severity = BugSeverity.NORMAL;
+        } else if (severityDataValue === "2") {
           severity = BugSeverity.MAJOR;
-        } else if (severityDataValue === "4") {
+        } else if (severityDataValue === "1") {
           severity = BugSeverity.CRITICAL;
         } else {
-          severity = BugSeverity.NORMAL; // Default fallback
+          severity = BugSeverity.NORMAL;
         }
 
         // 提取优先级

@@ -181,12 +181,13 @@ export default function Command() {
     return sortedBugs.filter((b) => !pinnedBugIds.includes(b.id));
   }, [sortedBugs, pinnedBugIds]);
 
-  const renderBugItem = (bug: BugListItem, isOverdue: boolean | string) => {
+  const renderBugItem = (bug: BugListItem, selectedProduct: string, isOverdue: boolean | string) => {
     const isPinned = pinnedBugIds.includes(bug.id);
     return (
       <BugListItemComponent
         key={bug.id}
         bug={bug}
+        selectedProduct={selectedProduct}
         isOverdue={isOverdue}
         isPinned={isPinned}
         onTogglePin={togglePinBug}
@@ -247,7 +248,7 @@ export default function Command() {
                   !(dayjs(bug.deadline).format("MM DD") === dayjs().format("MM DD")) &&
                   dayjs(bug.deadline).year(dayjs().year()).isBefore(dayjs());
 
-                return renderBugItem(bug, isOverdue);
+                return renderBugItem(bug, selectedProduct, isOverdue);
               })}
             </List.Section>
           )}
@@ -259,7 +260,7 @@ export default function Command() {
                 !(dayjs(bug.deadline).format("MM DD") === dayjs().format("MM DD")) &&
                 dayjs(bug.deadline).year(dayjs().year()).isBefore(dayjs());
 
-              return renderBugItem(bug, isOverdue);
+              return renderBugItem(bug, selectedProduct, isOverdue);
             })}
           </List.Section>
         </>

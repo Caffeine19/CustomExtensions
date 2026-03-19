@@ -10,8 +10,10 @@ import { SortOrder } from "@/types/sortOrder";
 
 interface BugListItemProps {
   bug: BugListItemType;
+  selectedProduct: string;
   isOverdue: boolean | string;
   isPinned: boolean;
+
   onTogglePin: (bugId: string) => void;
   onSortOrderChange: (order: SortOrder) => void;
   onRefreshSession: () => Promise<void>;
@@ -19,8 +21,10 @@ interface BugListItemProps {
 
 export function BugListItem({
   bug,
+  selectedProduct,
   isOverdue,
   isPinned,
+
   onTogglePin,
   onSortOrderChange,
   onRefreshSession,
@@ -29,7 +33,7 @@ export function BugListItem({
     <List.Item
       icon={getBugStatusIconConfig(bug.status)}
       title={bug.title}
-      subtitle={bug.product}
+      subtitle={selectedProduct ? undefined : bug.product}
       accessories={[
         ...(bug.deadline
           ? [
