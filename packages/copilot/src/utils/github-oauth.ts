@@ -1,7 +1,7 @@
 import { Clipboard, open } from "@raycast/api";
 
-const CLIENT_ID = "Iv1.b507a08c87ecfe98"; // VS Code Client ID
-const SCOPES = "read:user";
+const CLIENT_ID = "178c6fc778ccc68e1d6a"; // GitHub CLI OAuth App (supports scopes properly)
+const SCOPES = "read:user user:email";
 
 interface DeviceCodeResponse {
   device_code: string;

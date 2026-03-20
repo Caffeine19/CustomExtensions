@@ -13,6 +13,12 @@ export interface GitHubUser {
   avatar_url: string;
 }
 
+export interface GitHubEmail {
+  email: string;
+  primary: boolean;
+  verified: boolean;
+}
+
 export interface CopilotUsage {
   copilotPlan: string;
   assignedDate: string | null;
@@ -49,13 +55,34 @@ interface RawQuotaSnapshot {
 }
 
 export async function fetchGitHubUser(token: string): Promise<GitHubUser> {
-  const response = await fetch("https://api.github.com/user", {
-    headers: {
-      Authorization: `token ${token}`,
-      Accept: "application/json",
-      "User-Agent": "GitHubCopilotChat/0.26.7",
-    },
-  });
+  const headers = {
+    Authorization: `token ${token}`,
+    Accept: "application/json",
+    "User-Agent": "GitHubCopilotChat/0.26.7",
+  };
+
+  const response = await fetch("https://api.github.com/user", { headers });
+
+  if (response.status === 401 || response.status === 403) {
+    throw new Error("Authentication failed. Please sign in again.");
+  }
+  if (!response.ok) {
+    throw new Error(`GitHub API error: ${response.status}`);
+  }
+
+  const user: GitHubUser = await response.json();
+
+  return user;
+}
+
+export async function fetchGithubEmail(token: string): Promise<GitHubEmail> {
+  const headers = {
+    Authorization: `token ${token}`,
+    Accept: "application/json",
+    "User-Agent": "GitHubCopilotChat/0.26.7",
+  };
+
+  const response = await fetch("https://api.github.com/user/emails", { headers });
 
   if (response.status === 401 || response.status === 403) {
     throw new Error("Authentication failed. Please sign in again.");
@@ -65,7 +92,10 @@ export async function fetchGitHubUser(token: string): Promise<GitHubUser> {
     throw new Error(`GitHub API error: ${response.status}`);
   }
 
-  return response.json() as Promise<GitHubUser>;
+  const emails: GitHubEmail[] = await response.json();
+  const primary = emails.find((e) => e.primary && e.verified) ?? emails.find((e) => e.primary) ?? emails[0];
+
+  return primary;
 }
 
 export async function fetchCopilotUsage(token: string): Promise<CopilotUsage> {

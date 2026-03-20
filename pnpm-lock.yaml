@@ -20,6 +20,12 @@ importers:
       '@raycast/utils':
         specifier: ^1.17.0
         version: 1.19.1(@raycast/api@1.104.9(@types/node@22.13.10)(@types/react@19.0.10))
+      dayjs:
+        specifier: ^1.11.13
+        version: 1.11.19
+      radash:
+        specifier: ^12.1.1
+        version: 12.1.1
     devDependencies:
       '@raycast/eslint-config':
         specifier: ^2.0.4
@@ -360,9 +366,6 @@ importers:
       react-i18next:
         specifier: ^15.6.1
         version: 15.7.4(i18next@25.8.13(typescript@5.9.3))(react@19.0.0)(typescript@5.9.3)
-      ts-pattern:
-        specifier: ^5.9.0
-        version: 5.9.0
     devDependencies:
       '@raycast/eslint-config':
         specifier: ^2.0.4
@@ -2049,9 +2052,6 @@ packages:
     engines: {node: '>=18.12'}
     peerDependencies:
       typescript: '>=4.8.4'
-
-  ts-pattern@5.9.0:
-    resolution: {integrity: sha512-6s5V71mX8qBUmlgbrfL33xDUwO0fq48rxAu2LBE11WBeGdpCPOsXksQbZJHvHwhrd3QjUusd3mAOM5Gg0mFBLg==}
 
   turbo-darwin-64@2.8.13:
     resolution: {integrity: sha512-PmOvodQNiOj77+Zwoqku70vwVjKzL34RTNxxoARjp5RU5FOj/CGiC6vcDQhNtFPUOWSAaogHF5qIka9TBhX4XA==}
@@ -4172,8 +4172,6 @@ snapshots:
   ts-api-utils@2.4.0(typescript@5.9.3):
     dependencies:
       typescript: 5.9.3
-
-  ts-pattern@5.9.0: {}
 
   turbo-darwin-64@2.8.13:
     optional: true
