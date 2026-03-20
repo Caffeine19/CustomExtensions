@@ -1,3 +1,6 @@
+import { gen, fail, succeed, tryPromise } from "effect/Effect";
+import { AuthenticationError, GitHubApiError } from "../types/errors";
+
 const COPILOT_HEADERS = {
   Accept: "application/json",
   "Editor-Version": "vscode/1.96.2",
@@ -54,69 +57,67 @@ interface RawQuotaSnapshot {
   quota_id?: string;
 }
 
-export async function fetchGitHubUser(token: string): Promise<GitHubUser> {
-  const headers = {
+function authHeaders(token: string) {
+  return {
     Authorization: `token ${token}`,
     Accept: "application/json",
     "User-Agent": "GitHubCopilotChat/0.26.7",
   };
-
-  const response = await fetch("https://api.github.com/user", { headers });
-
-  if (response.status === 401 || response.status === 403) {
-    throw new Error("Authentication failed. Please sign in again.");
-  }
-  if (!response.ok) {
-    throw new Error(`GitHub API error: ${response.status}`);
-  }
-
-  const user: GitHubUser = await response.json();
-
-  return user;
 }
 
-export async function fetchGithubEmail(token: string): Promise<GitHubEmail> {
-  const headers = {
-    Authorization: `token ${token}`,
-    Accept: "application/json",
-    "User-Agent": "GitHubCopilotChat/0.26.7",
-  };
-
-  const response = await fetch("https://api.github.com/user/emails", { headers });
-
+function checkResponse(response: Response, label: string) {
   if (response.status === 401 || response.status === 403) {
-    throw new Error("Authentication failed. Please sign in again.");
+    return fail(new AuthenticationError({ message: "Authentication failed. Please sign in again." }));
   }
-
   if (!response.ok) {
-    throw new Error(`GitHub API error: ${response.status}`);
+    return fail(new GitHubApiError({ message: `${label} error: ${response.status}`, status: response.status }));
   }
-
-  const emails: GitHubEmail[] = await response.json();
-  const primary = emails.find((e) => e.primary && e.verified) ?? emails.find((e) => e.primary) ?? emails[0];
-
-  return primary;
+  return succeed(response);
 }
 
-export async function fetchCopilotUsage(token: string): Promise<CopilotUsage> {
-  const response = await fetch("https://api.github.com/copilot_internal/user", {
-    headers: {
-      Authorization: `token ${token}`,
-      ...COPILOT_HEADERS,
-    },
+export const fetchGitHubUser = (token: string) =>
+  gen(function* () {
+    const response = yield* tryPromise({
+      try: () => fetch("https://api.github.com/user", { headers: authHeaders(token) }),
+      catch: () => new GitHubApiError({ message: "Network error fetching user", status: 0 }),
+    });
+    yield* checkResponse(response, "GitHub API");
+    return yield* tryPromise({
+      try: () => response.json() as Promise<GitHubUser>,
+      catch: () => new GitHubApiError({ message: "Failed to parse user response", status: 0 }),
+    });
   });
 
-  if (response.status === 401 || response.status === 403) {
-    throw new Error("Authentication failed. Please sign in again.");
-  }
+export const fetchGithubEmail = (token: string) =>
+  gen(function* () {
+    const response = yield* tryPromise({
+      try: () => fetch("https://api.github.com/user/emails", { headers: authHeaders(token) }),
+      catch: () => new GitHubApiError({ message: "Network error fetching emails", status: 0 }),
+    });
+    yield* checkResponse(response, "GitHub API");
+    const emails = yield* tryPromise({
+      try: () => response.json() as Promise<GitHubEmail[]>,
+      catch: () => new GitHubApiError({ message: "Failed to parse email response", status: 0 }),
+    });
+    return emails.find((e) => e.primary && e.verified) ?? emails.find((e) => e.primary) ?? emails[0];
+  });
 
-  if (!response.ok) {
-    throw new Error(`Copilot API error: ${response.status}`);
-  }
-
-  const data = (await response.json()) as CopilotApiResponse;
-  return parseCopilotResponse(data);
-}
+export const fetchCopilotUsage = (token: string) =>
+  gen(function* () {
+    const response = yield* tryPromise({
+      try: () =>
+        fetch("https://api.github.com/copilot_internal/user", {
+          headers: { Authorization: `token ${token}`, ...COPILOT_HEADERS },
+        }),
+      catch: () => new GitHubApiError({ message: "Network error fetching Copilot usage", status: 0 }),
+    });
+    yield* checkResponse(response, "Copilot API");
+    const data = yield* tryPromise({
+      try: () => response.json() as Promise<CopilotApiResponse>,
+      catch: () => new GitHubApiError({ message: "Failed to parse Copilot response", status: 0 }),
+    });
+    return parseCopilotResponse(data);
+  });
 
 function parseQuotaSnapshot(raw: RawQuotaSnapshot | undefined): QuotaInfo | null {
   if (!raw) return null;

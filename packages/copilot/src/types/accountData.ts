@@ -5,7 +5,6 @@ export interface AccountData {
   account: StoredAccount;
   user: GitHubUser | null;
   email: GitHubEmail | null;
-
   usage: CopilotUsage | null;
   error: string | null;
 }

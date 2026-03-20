@@ -1,6 +1,8 @@
 import { ActionPanel, Action, Icon, List, showToast, Toast } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
 import { useCallback, useState } from "react";
+import { gen, all, catchAll, succeed, runPromise, runPromiseExit } from "effect/Effect";
+import { isSuccess } from "effect/Exit";
 import { fetchCopilotUsage, fetchGithubEmail, fetchGitHubUser } from "./utils/copilot-api";
 import { addAccount, getStoredAccounts, removeAccount, StoredAccount } from "./utils/token-storage";
 import { startDeviceFlow } from "./utils/github-oauth";
@@ -8,25 +10,24 @@ import { AccountData } from "./types/accountData";
 import AccountListItem from "./components/account-list-item";
 import { sort } from "radash";
 
-async function loadAccountData(account: StoredAccount): Promise<AccountData> {
-  try {
-    const [user, email, usage] = await Promise.all([
-      fetchGitHubUser(account.token),
-      fetchGithubEmail(account.token),
-      fetchCopilotUsage(account.token),
-    ]);
-
-    return {
-      account,
-      user,
-      usage,
-      email,
-      error: null,
-    };
-  } catch (e) {
-    return { account, user: null, usage: null, email: null, error: e instanceof Error ? e.message : String(e) };
-  }
-}
+const loadAccountData = (account: StoredAccount) =>
+  gen(function* () {
+    const [user, email, usage] = yield* all(
+      [fetchGitHubUser(account.token), fetchGithubEmail(account.token), fetchCopilotUsage(account.token)] as const,
+      { concurrency: "unbounded" },
+    );
+    return { account, user, email, usage, error: null } satisfies AccountData;
+  }).pipe(
+    catchAll((error) =>
+      succeed({
+        account,
+        user: null,
+        email: null,
+        usage: null,
+        error: error.message,
+      } satisfies AccountData),
+    ),
+  );
 
 export default function Command() {
   const [refreshKey, setRefreshKey] = useState(0);
@@ -34,9 +35,10 @@ export default function Command() {
   const { data, isLoading, revalidate } = usePromise(
     async (key: number) => {
       void key;
-      const accounts = await getStoredAccounts();
+      const accounts = await runPromise(getStoredAccounts);
       if (accounts.length === 0) return [];
-      return Promise.all(accounts.map(loadAccountData));
+      const effects = accounts.map(loadAccountData);
+      return runPromise(all(effects, { concurrency: "unbounded" }));
     },
     [refreshKey],
   );
@@ -47,27 +49,34 @@ export default function Command() {
       title: "Signing in...",
       message: "Check your browser",
     });
-    try {
-      const { userCode, token } = await startDeviceFlow();
+
+    const program = gen(function* () {
+      const { userCode, token } = yield* startDeviceFlow;
       toast.message = `Code: ${userCode} (copied to clipboard)`;
 
-      const accessToken = await token;
-      const user = await fetchGitHubUser(accessToken);
+      const accessToken = yield* token;
+      const user = yield* fetchGitHubUser(accessToken);
 
-      await addAccount({ token: accessToken, login: user.login, addedAt: new Date().toISOString() });
+      yield* addAccount({ token: accessToken, login: user.login, addedAt: new Date().toISOString() });
+      return user.login;
+    });
+
+    const exit = await runPromiseExit(program);
+
+    if (isSuccess(exit)) {
       toast.style = Toast.Style.Success;
       toast.title = "Signed in";
-      toast.message = user.login;
+      toast.message = exit.value;
       setRefreshKey((k) => k + 1);
-    } catch (e) {
+    } else {
       toast.style = Toast.Style.Failure;
       toast.title = "Sign in failed";
-      toast.message = e instanceof Error ? e.message : String(e);
+      toast.message = String(exit.cause);
     }
   }, []);
 
   const handleRemoveAccount = useCallback(async (login: string) => {
-    await removeAccount(login);
+    await runPromise(removeAccount(login));
     await showToast({ style: Toast.Style.Success, title: "Removed", message: login });
     setRefreshKey((k) => k + 1);
   }, []);
