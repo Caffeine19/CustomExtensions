@@ -225,12 +225,16 @@ export async function getAllWindows(): Promise<Window[]> {
         
         -- Skip Raycast windows and non-standard windows
         if window:isStandard() then
+            local windowId = window:id()
+            local windowSpaces = hs.spaces.windowSpaces(windowId)
+            local spaceId = windowSpaces and windowSpaces[1] or nil
             table.insert(windows, {
-                id = tostring(window:id()),
+                id = tostring(windowId),
                 title = windowTitle,
                 application = appName,
                 isMinimized = window:isMinimized(),
-                isFullscreen = window:isFullscreen()
+                isFullscreen = window:isFullscreen(),
+                spaceId = spaceId and tostring(spaceId) or nil
             })
         end
     end
@@ -356,4 +360,125 @@ export async function getFocusedWindow(): Promise<Window | null> {
     return null;
   }
   return JSON.parse(result);
+}
+
+interface MoveWindowInfo {
+  sameScreen: boolean;
+  windowScreenUUID: string;
+  targetScreenUUID: string;
+  otherScreenUUID: string | null;
+}
+
+/**
+ * Move a window to a target space using moveToScreen + gotoSpace approach.
+ *
+ * Case 1: Window on display A, target space on display B
+ *   → gotoSpace(target), then moveToScreen(displayB)
+ *
+ * Case 2: Window on display A, target space on display A (multi-display)
+ *   → moveToScreen(displayB), gotoSpace(target), moveToScreen(displayA)
+ *
+ * Case 3: Single display fallback
+ *   → hs.spaces.moveWindowToSpace + gotoSpace
+ */
+export async function moveWindowToSpace(
+  windowId: string,
+  targetSpaceId: string,
+): Promise<void> {
+  // Step 1: Gather info about window screen and target space screen
+  const infoCode = /* lua */ `
+    local windowId = tonumber(${windowId})
+    local targetSpaceId = tonumber(${targetSpaceId})
+
+    local window = hs.window.get(windowId)
+    if not window then error("Window not found: " .. tostring(windowId)) end
+
+    local windowScreen = window:screen()
+    local windowScreenUUID = windowScreen:getUUID()
+
+    local targetScreenUUID = hs.spaces.spaceDisplay(targetSpaceId)
+    if not targetScreenUUID then error("Cannot find display for target space") end
+
+    local sameScreen = (windowScreenUUID == targetScreenUUID)
+
+    local otherScreenUUID = nil
+    if sameScreen then
+      local allScreens = hs.screen.allScreens()
+      for _, s in ipairs(allScreens) do
+        if s:getUUID() ~= windowScreenUUID then
+          otherScreenUUID = s:getUUID()
+          break
+        end
+      end
+    end
+
+    return hs.json.encode({
+      sameScreen = sameScreen,
+      windowScreenUUID = windowScreenUUID,
+      targetScreenUUID = targetScreenUUID,
+      otherScreenUUID = otherScreenUUID
+    })
+  `;
+
+  const info: MoveWindowInfo = JSON.parse(await callHammerspoon(infoCode));
+
+  if (!info.sameScreen) {
+    // Case 1: Different screens
+    // First goto the target space on the target display
+    await gotoSpace(targetSpaceId);
+    await sleep(500);
+
+    // Then move window to the target display
+    await callHammerspoon(/* lua */ `
+      local window = hs.window.get(tonumber(${windowId}))
+      if not window then error("Window not found after space switch") end
+      local screen = hs.screen.find("${info.targetScreenUUID}")
+      if not screen then error("Target screen not found") end
+      hs.window.animationDuration = 0
+      window:moveToScreen(screen, false, true)
+      window:focus()
+    `);
+  } else if (info.otherScreenUUID) {
+    // Case 2: Same screen, multi-display — bounce through another display
+    // Step 1: Move window to the other display temporarily
+    await callHammerspoon(/* lua */ `
+      local window = hs.window.get(tonumber(${windowId}))
+      if not window then error("Window not found") end
+      local screen = hs.screen.find("${info.otherScreenUUID}")
+      if not screen then error("Other screen not found") end
+      hs.window.animationDuration = 0
+      window:moveToScreen(screen, false, true)
+    `);
+    await sleep(300);
+
+    // Step 2: Goto target space on the original display
+    await gotoSpace(targetSpaceId);
+    await sleep(500);
+
+    // Step 3: Move window back to the original display (now showing target space)
+    await callHammerspoon(/* lua */ `
+      local window = hs.window.get(tonumber(${windowId}))
+      if not window then error("Window not found after space switch") end
+      local screen = hs.screen.find("${info.windowScreenUUID}")
+      if not screen then error("Original screen not found") end
+      hs.window.animationDuration = 0
+      window:moveToScreen(screen, false, true)
+      window:focus()
+    `);
+  } else {
+    // Case 3: Single display — fallback to hs.spaces.moveWindowToSpace
+    await callHammerspoon(/* lua */ `
+      local ok, err = hs.spaces.moveWindowToSpace(tonumber(${windowId}), tonumber(${targetSpaceId}))
+      if not ok then error("Failed to move window: " .. tostring(err)) end
+    `);
+    await sleep(100);
+    await gotoSpace(targetSpaceId);
+    await sleep(500);
+
+    // Focus the window on the new space
+    await callHammerspoon(/* lua */ `
+      local window = hs.window.get(tonumber(${windowId}))
+      if window then window:focus() end
+    `);
+  }
 }

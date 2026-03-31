@@ -4,25 +4,112 @@ import {
   Icon,
   List,
   Image,
+  Color,
   closeMainWindow,
+  useNavigation,
+  showToast,
+  Toast,
+  popToRoot,
 } from "@raycast/api";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSpaceStore } from "./stores/space-store";
 import { DEFAULT_WINDOW_ICON } from "./constants/icon";
+import { group, tryit } from "radash";
+import { moveWindowToSpace } from "./utils/space";
+import { Space, Window as AppWindow } from "./types/space";
 
 interface WindowItemProps {
-  window: {
-    id: string;
-    title: string;
-    application: string;
-    isMinimized: boolean;
-    isFullscreen: boolean;
-  };
+  window: AppWindow;
   appIcon?: string;
   onFocus: (windowId: string) => void;
 }
 
+function MoveToSpaceList({
+  windowId,
+  windowTitle,
+  windowSpaceId,
+}: {
+  windowId: string;
+  windowTitle: string;
+  windowSpaceId?: string;
+}) {
+  const { spaces, isLoading, fetchSpaces } = useSpaceStore();
+  const hasFetchedRef = useRef(false);
+
+  useEffect(() => {
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+    if (spaces.length === 0) {
+      fetchSpaces();
+    }
+  }, []);
+
+  const handleMove = async (spaceId: string, spaceName: string) => {
+    await closeMainWindow();
+    const [err] = await tryit(moveWindowToSpace)(windowId, spaceId);
+    if (err) {
+      await showToast({
+        style: Toast.Style.Failure,
+        title: `Failed: ${err.message}`,
+      });
+      return;
+    }
+    await showToast({
+      style: Toast.Style.Success,
+      title: `Moved "${windowTitle}" to ${spaceName}`,
+    });
+    popToRoot();
+  };
+
+  const spacesByScreen = group(spaces, (space) => space.screenName);
+
+  return (
+    <List
+      isLoading={isLoading}
+      navigationTitle={`Move "${windowTitle}" to\u2026`}
+      searchBarPlaceholder="Search spaces..."
+    >
+      {Object.entries(spacesByScreen).map(([screenName, spacesInScreen]) => (
+        <List.Section key={screenName} title={screenName}>
+          {spacesInScreen?.map((space: Space) => (
+            <List.Item
+              key={space.id}
+              id={space.id}
+              icon={{
+                source: Icon.Window,
+                tintColor: space.id === windowSpaceId ? Color.Green : undefined,
+              }}
+              title={space.name || `Space ${space.id}`}
+              accessories={[
+                space.id === windowSpaceId
+                  ? {
+                      icon: {
+                        source: Icon.Pin,
+                        tintColor: Color.Green,
+                      },
+                    }
+                  : {},
+              ]}
+              actions={
+                <ActionPanel>
+                  <Action
+                    title="Move Window Here"
+                    icon={Icon.ArrowRight}
+                    onAction={() => handleMove(space.id, space.name)}
+                  />
+                </ActionPanel>
+              }
+            />
+          ))}
+        </List.Section>
+      ))}
+    </List>
+  );
+}
+
 function WindowItem({ window, appIcon, onFocus }: WindowItemProps) {
+  const { push } = useNavigation();
+
   const getIcon = (): Image.ImageLike => {
     if (appIcon) {
       return { fileIcon: appIcon };
@@ -55,6 +142,19 @@ function WindowItem({ window, appIcon, onFocus }: WindowItemProps) {
             title="Focus Window"
             icon={Icon.Eye}
             onAction={() => onFocus(window.id)}
+          />
+          <Action
+            title="Move to Space"
+            icon={Icon.ArrowRight}
+            onAction={() =>
+              push(
+                <MoveToSpaceList
+                  windowId={window.id}
+                  windowTitle={window.title}
+                  windowSpaceId={window.spaceId}
+                />,
+              )
+            }
           />
           <Action.CopyToClipboard
             title="Copy Window Title"

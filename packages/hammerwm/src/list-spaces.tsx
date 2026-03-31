@@ -165,7 +165,6 @@ export default function Command() {
       isLoading={isLoading}
       navigationTitle="Spaces"
       searchBarPlaceholder="Search spaces..."
-      isShowingDetail
       onSelectionChange={handleSelectionChange}
     >
       {Object.entries(spacesByScreen).map(([screenName, spacesInScreen]) => {
