@@ -24,13 +24,29 @@
       "subtitle": "Microsoft Edge",
       "description": "Open a new Edge Window with profile selection",
       "mode": "view"
+    },
+    {
+      "name": "import-from-csv",
+      "title": "Import Workspaces from Sync Dump",
+      "subtitle": "Microsoft Edge",
+      "description": "Import workspaces by parsing a sync-data-dump CSV or XLSX from edge://sync-internals.",
+      "mode": "view"
+    },
+    {
+      "name": "search-imported-workspaces",
+      "title": "Search Imported Workspaces",
+      "subtitle": "Microsoft Edge",
+      "description": "Browse workspaces and tabs imported from an Edge sync dump.",
+      "mode": "view"
     }
   ],
   "dependencies": {
     "@raycast/api": "^1.98.4",
     "@raycast/utils": "^1.17.0",
     "dayjs": "^1.11.13",
-    "radash": "^12.1.0"
+    "json5": "^2.2.3",
+    "radash": "^12.1.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@raycast/eslint-config": "^2.0.4",
