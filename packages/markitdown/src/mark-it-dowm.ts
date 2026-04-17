@@ -1,7 +1,7 @@
 import { getSelectedFinderItems, showToast, Toast, open, Clipboard } from "@raycast/api";
 import { existsSync } from "fs";
 import { homedir } from "os";
-import { join } from "path";
+import { join, parse } from "path";
 import { promisifyExec } from "./utils/promisifyExec";
 import { tryit } from "radash";
 
@@ -33,7 +33,8 @@ export default async function Command() {
       message: "Select a file in Finder or copy a file path to the clipboard.",
     });
   }
-  const mdFilePath = `${sourceFilePath}.md`;
+  const { dir, name } = parse(sourceFilePath);
+  const mdFilePath = join(dir, `${name}.md`);
 
   await showToast({
     style: Toast.Style.Animated,
