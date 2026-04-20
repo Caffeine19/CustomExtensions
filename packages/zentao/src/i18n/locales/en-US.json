@@ -4,7 +4,8 @@
     "refresh": "Refresh",
     "cancel": "Cancel",
     "submit": "Submit",
-    "pinned": "Pinned"
+    "pinned": "Pinned",
+    "setAside": "Set Aside"
   },
   "taskList": {
     "searchPlaceholder": "Search tasks with fuzzy match & pinyin support (拼音搜索)",
@@ -44,6 +45,8 @@
     "copyBugUrl": "Copy Bug URL",
     "pinBug": "Pin Bug",
     "unpinBug": "Unpin Bug",
+    "setAside": "Set Aside",
+    "unsetAside": "Unset Aside",
     "resolveBug": "Resolve Bug"
   },
   "sortActions": {

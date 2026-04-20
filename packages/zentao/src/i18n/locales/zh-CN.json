@@ -4,7 +4,8 @@
     "refresh": "刷新",
     "cancel": "取消",
     "submit": "提交",
-    "pinned": "已置顶"
+    "pinned": "已置顶",
+    "setAside": "已搁置"
   },
   "taskList": {
     "searchPlaceholder": "按标题、状态、优先级或指派人搜索任务...",
@@ -44,6 +45,8 @@
     "copyBugUrl": "复制Bug URL",
     "pinBug": "置顶Bug",
     "unpinBug": "取消置顶",
+    "setAside": "搁置",
+    "unsetAside": "取消搁置",
     "resolveBug": "解决Bug"
   },
   "sortActions": {

@@ -26,6 +26,7 @@ export default function Command() {
 
   const [selectedProduct, setSelectedProduct] = useCachedState<string>(CACHE_KEYS.SELECTED_PRODUCT, "all");
   const [pinnedBugIds, setPinnedBugIds] = useCachedState<string[]>(CACHE_KEYS.PINNED_BUGS, []);
+  const [setAsideBugIds, setSetAsideBugIds] = useCachedState<string[]>(CACHE_KEYS.SET_ASIDE_BUGS, []);
 
   const [searchQuery, setSearchQuery] = useState<string>("");
 
@@ -38,6 +39,19 @@ export default function Command() {
       buffer.push(bugId);
       return Array.from(buffer);
     });
+    setSetAsideBugIds((prev) => prev.filter((id) => id !== bugId));
+  };
+
+  const toggleSetAsideBug = (bugId: string) => {
+    setSetAsideBugIds((prev) => {
+      if (prev.includes(bugId)) {
+        return prev.filter((id) => id !== bugId);
+      }
+      const buffer = CircularBuffer.from(prev, Array, 10);
+      buffer.push(bugId);
+      return Array.from(buffer);
+    });
+    setPinnedBugIds((prev) => prev.filter((id) => id !== bugId));
   };
 
   const fetchBugs = async () => {
@@ -174,15 +188,20 @@ export default function Command() {
 
   /** 置顶Bug排在前面 */
   const pinnedBugs = useMemo(() => {
-    return sortedBugs.filter((b) => pinnedBugIds.includes(b.id));
-  }, [sortedBugs, pinnedBugIds]);
+    return sortedBugs.filter((b) => pinnedBugIds.includes(b.id) && !setAsideBugIds.includes(b.id));
+  }, [sortedBugs, pinnedBugIds, setAsideBugIds]);
 
   const unpinnedBugs = useMemo(() => {
-    return sortedBugs.filter((b) => !pinnedBugIds.includes(b.id));
-  }, [sortedBugs, pinnedBugIds]);
+    return sortedBugs.filter((b) => !pinnedBugIds.includes(b.id) && !setAsideBugIds.includes(b.id));
+  }, [sortedBugs, pinnedBugIds, setAsideBugIds]);
+
+  const setAsideBugs = useMemo(() => {
+    return sortedBugs.filter((b) => setAsideBugIds.includes(b.id) && !pinnedBugIds.includes(b.id));
+  }, [sortedBugs, setAsideBugIds, pinnedBugIds]);
 
   const renderBugItem = (bug: BugListItem, selectedProduct: string, isOverdue: boolean | string) => {
     const isPinned = pinnedBugIds.includes(bug.id);
+    const isSetAside = setAsideBugIds.includes(bug.id);
     return (
       <BugListItemComponent
         key={bug.id}
@@ -190,7 +209,9 @@ export default function Command() {
         selectedProduct={selectedProduct}
         isOverdue={isOverdue}
         isPinned={isPinned}
+        isSetAside={isSetAside}
         onTogglePin={togglePinBug}
+        onToggleSetAside={toggleSetAsideBug}
         onSortOrderChange={setSortOrder}
         onRefreshSession={handleRefreshSession}
       />
@@ -226,7 +247,7 @@ export default function Command() {
         </List.Dropdown>
       }
     >
-      {pinnedBugs.length === 0 && unpinnedBugs.length === 0 ? (
+      {pinnedBugs.length === 0 && unpinnedBugs.length === 0 && setAsideBugs.length === 0 ? (
         <List.EmptyView
           title={t("bugList.noBugsTitle")}
           description={t("bugList.noBugsDescription")}
@@ -240,7 +261,7 @@ export default function Command() {
       ) : (
         <>
           {pinnedBugs.length > 0 && (
-            <List.Section title={t("general.pinned")}>
+            <List.Section title={`${t("general.pinned")} (${pinnedBugs.length})`}>
               {pinnedBugs.map((bug) => {
                 const isOverdue =
                   bug.status === BugStatus.ACTIVE &&
@@ -252,7 +273,7 @@ export default function Command() {
               })}
             </List.Section>
           )}
-          <List.Section title={pinnedBugs.length > 0 ? t("bugList.myBugs") : undefined}>
+          <List.Section title={pinnedBugs.length > 0 ? `${t("bugList.myBugs")} (${unpinnedBugs.length})` : undefined}>
             {unpinnedBugs.map((bug) => {
               const isOverdue =
                 bug.status === BugStatus.ACTIVE &&
@@ -263,6 +284,19 @@ export default function Command() {
               return renderBugItem(bug, selectedProduct, isOverdue);
             })}
           </List.Section>
+          {setAsideBugs.length > 0 && (
+            <List.Section title={`${t("general.setAside")} (${setAsideBugs.length})`}>
+              {setAsideBugs.map((bug) => {
+                const isOverdue =
+                  bug.status === BugStatus.ACTIVE &&
+                  bug.deadline &&
+                  !(dayjs(bug.deadline).format("MM DD") === dayjs().format("MM DD")) &&
+                  dayjs(bug.deadline).year(dayjs().year()).isBefore(dayjs());
+
+                return renderBugItem(bug, selectedProduct, isOverdue);
+              })}
+            </List.Section>
+          )}
         </>
       )}
     </List>

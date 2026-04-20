@@ -10,7 +10,9 @@ import { SortOrder } from "@/types/sortOrder";
 interface BugItemActionsProps {
   bug: BugListItem;
   isPinned: boolean;
+  isSetAside: boolean;
   onTogglePin: (bugId: string) => void;
+  onToggleSetAside: (bugId: string) => void;
   onSortOrderChange: (order: SortOrder) => void;
   onRefreshSession: () => Promise<void>;
 }
@@ -18,7 +20,9 @@ interface BugItemActionsProps {
 export function BugItemActions({
   bug,
   isPinned,
+  isSetAside,
   onTogglePin,
+  onToggleSetAside,
   onSortOrderChange,
   onRefreshSession,
 }: BugItemActionsProps) {
@@ -39,6 +43,13 @@ export function BugItemActions({
         onAction={() => onTogglePin(bug.id)}
         icon={isPinned ? Icon.PinDisabled : Icon.Pin}
         shortcut={{ modifiers: ["cmd", "shift"], key: "p" }}
+      />
+
+      <Action
+        title={isSetAside ? t("bugActions.unsetAside") : t("bugActions.setAside")}
+        onAction={() => onToggleSetAside(bug.id)}
+        icon={Icon.Tray}
+        shortcut={{ modifiers: ["cmd"], key: "g" }}
       />
 
       <Action.CopyToClipboard

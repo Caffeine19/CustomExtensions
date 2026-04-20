@@ -13,8 +13,10 @@ interface BugListItemProps {
   selectedProduct: string;
   isOverdue: boolean | string;
   isPinned: boolean;
+  isSetAside: boolean;
 
   onTogglePin: (bugId: string) => void;
+  onToggleSetAside: (bugId: string) => void;
   onSortOrderChange: (order: SortOrder) => void;
   onRefreshSession: () => Promise<void>;
 }
@@ -24,8 +26,10 @@ export function BugListItem({
   selectedProduct,
   isOverdue,
   isPinned,
+  isSetAside,
 
   onTogglePin,
+  onToggleSetAside,
   onSortOrderChange,
   onRefreshSession,
 }: BugListItemProps) {
@@ -64,7 +68,9 @@ export function BugListItem({
         <BugItemActions
           bug={bug}
           isPinned={isPinned}
+          isSetAside={isSetAside}
           onTogglePin={onTogglePin}
+          onToggleSetAside={onToggleSetAside}
           onSortOrderChange={onSortOrderChange}
           onRefreshSession={onRefreshSession}
         />
