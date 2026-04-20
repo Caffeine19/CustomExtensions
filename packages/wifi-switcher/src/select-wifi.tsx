@@ -18,7 +18,6 @@ export default function Command() {
     (async () => {
       const wifiListStr = await LocalStorage.getItem("wifi-list");
       if (typeof wifiListStr !== "string") return;
-      console.log("🚀 ~ select-wifi.tsx:20 ~ wifiListStr:", wifiListStr);
       const wifiList = JSON.parse(wifiListStr);
       setWifiList(wifiList);
     })();

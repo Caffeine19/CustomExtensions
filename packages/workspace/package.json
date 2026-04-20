@@ -3,7 +3,7 @@
   "name": "workspace",
   "title": "Workspace",
   "description": "Integrate with Microsoft Edge Workspaces.",
-  "icon": "extension-icon.png",
+  "icon": "extension-icon-v2.png",
   "author": "CaffeineCat",
   "categories": [
     "Web",
