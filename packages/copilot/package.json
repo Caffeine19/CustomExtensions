@@ -17,6 +17,33 @@
       "subtitle": "GitHub Copilot",
       "description": "View GitHub Copilot premium request usage for all signed-in accounts.",
       "mode": "view"
+    },
+    {
+      "name": "list-chat-sessions",
+      "title": "List Chat Sessions",
+      "subtitle": "VS Code Copilot",
+      "description": "Browse all local VS Code Copilot chat sessions and open them in their workspace.",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "vscodeVariant",
+      "title": "VS Code Variant",
+      "description": "Which VS Code variant to read sessions from.",
+      "type": "dropdown",
+      "required": false,
+      "default": "insiders",
+      "data": [
+        {
+          "title": "VS Code Insiders",
+          "value": "insiders"
+        },
+        {
+          "title": "VS Code Stable",
+          "value": "stable"
+        }
+      ]
     }
   ],
   "dependencies": {

@@ -1,0 +1,27 @@
+{
+  "name": "open-chat-session",
+  "displayName": "Open Chat Session",
+  "description": "Open a specific local Copilot chat session by ID. Designed to be triggered from Raycast or other external tools.",
+  "version": "0.1.0",
+  "publisher": "CaffeineCat",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {},
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.100.0",
+    "typescript": "^5.8.2"
+  }
+}
