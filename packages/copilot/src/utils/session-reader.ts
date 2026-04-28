@@ -99,20 +99,32 @@ function readSessionIndex(dbPath: string): Effect.Effect<ChatSessionIndex | null
 
 // ── Chat status derivation ───────────────────────────────────────────────────
 
+// Any real AI response (even the fastest network round-trip + inference) takes well
+// over 1 second. We use this threshold to distinguish "serialized while in-progress"
+// from "actually completed".
+const IN_PROGRESS_TIMING_THRESHOLD_MS = 1000;
+
 /**
  * Derive a human-readable ChatStatus from session metadata.
  *
- * VS Code's `lastResponseState` is a snapshot of the last completed
- * response — it does NOT reflect whether a new request is currently
- * in flight. The timing fields are more reliable:
+ * How VS Code writes timing (from chatModel.ts `timing` getter):
  *
- * When VS Code starts a new request, it persists both `lastRequestStarted`
- * and `lastRequestEnded` to the SAME timestamp (the start time). When the
- * request completes or is cancelled, it updates `lastRequestEnded` to the
- * actual end time, which is always > start. Therefore:
- *   - start === end  → in-progress (initial write, not yet finished)
- *   - start < end    → completed/cancelled/failed (use lastResponseState)
- *   - !start         → empty or no requests yet
+ *   lastRequestStarted = request.timestamp          (set via Date.now() in addRequest)
+ *   lastRequestEnded   = response.completedAt        (set only when Complete/Cancelled/Failed)
+ *                     ?? response.timestamp          (fallback: set via a SEPARATE Date.now()
+ *                                                     call inside ChatResponseModel constructor,
+ *                                                     which runs synchronously right after)
+ *
+ * Therefore:
+ *   - In-progress:         completedAt = undefined  →  lastRequestEnded = response.timestamp
+ *                          Two Date.now() calls in quick succession → diff is 0–1 ms
+ *   - Completed/Cancelled: completedAt = actual end time → diff is >> 1 s (at minimum a full
+ *                          network round-trip + model inference)
+ *
+ * IMPORTANT: chatSessionStore.ts `getSessionMetadata` explicitly converts
+ * Pending (0) and NeedsInput (4) → Cancelled (2) before persisting. So
+ * `lastResponseState=2` means either "user stopped" OR "was in-progress when
+ * VS Code serialized". Timing is the only way to tell them apart.
  *
  * ResponseModelState (stored as lastResponseState number):
  *   0 = Pending, 1 = Complete, 2 = Cancelled, 3 = Failed, 4 = NeedsInput
@@ -126,11 +138,18 @@ function deriveChatStatus(
   if (isEmpty ?? true) return "empty";
 
   // Timing is the most reliable signal for in-progress detection.
-  // When VS Code starts a new request, it writes both lastRequestStarted
-  // and lastRequestEnded to the SAME timestamp as the initial persisted
-  // state. When the request finishes, it updates lastRequestEnded to the
-  // actual completion time (always > start). So equal values = in-progress.
-  if (lastRequestStarted && lastRequestStarted === lastRequestEnded) return "in-progress";
+  // Use a threshold rather than strict equality because VS Code makes two
+  // separate Date.now() calls (one for the request, one for the response
+  // object), which can differ by up to ~1 ms. A real completion/cancellation
+  // always sets completedAt to the actual end time, so end - start is always
+  // >> 1 s for any genuine terminal state.
+  if (
+    lastRequestStarted !== undefined &&
+    lastRequestEnded !== undefined &&
+    lastRequestEnded - lastRequestStarted < IN_PROGRESS_TIMING_THRESHOLD_MS
+  ) {
+    return "in-progress";
+  }
 
   // Fall back to lastResponseState for terminal states
   if (lastResponseState !== undefined) {
