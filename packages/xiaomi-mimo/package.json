@@ -25,6 +25,13 @@
       "description": "Show Xiaomi MiMo token usage in the macOS menu bar.",
       "mode": "menu-bar",
       "interval": "5m"
+    },
+    {
+      "name": "update-cookie",
+      "title": "Update Cookie",
+      "subtitle": "Xiaomi MiMo",
+      "description": "Update the Xiaomi MiMo platform cookie when authentication expires.",
+      "mode": "view"
     }
   ],
   "preferences": [

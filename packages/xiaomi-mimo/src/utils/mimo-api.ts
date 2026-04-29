@@ -1,16 +1,18 @@
-import { getPreferenceValues } from "@raycast/api";
+import { getPreferenceValues, LocalStorage } from "@raycast/api";
 import { MiMoApiResponse, MiMoUsageData } from "../types/mimo-usage";
 import { AuthenticationError, MiMoApiError } from "../types/errors";
 
 const API_URL = "https://platform.xiaomimimo.com/api/v1/tokenPlan/usage";
 
-function getCookie(): string {
+async function getCookie(): Promise<string> {
+  const stored = await LocalStorage.getItem<string>("cookie");
+  if (stored) return stored;
   const prefs = getPreferenceValues<{ cookie: string }>();
   return prefs.cookie;
 }
 
 export async function fetchMiMoUsage(): Promise<MiMoUsageData> {
-  const cookie = getCookie();
+  const cookie = await getCookie();
 
   const response = await fetch(API_URL, {
     method: "GET",
@@ -25,6 +27,7 @@ export async function fetchMiMoUsage(): Promise<MiMoUsageData> {
       "x-timezone": "Asia/Shanghai",
     },
   });
+  console.log("API Response:", response);
 
   if (response.status === 401 || response.status === 403) {
     throw new AuthenticationError({

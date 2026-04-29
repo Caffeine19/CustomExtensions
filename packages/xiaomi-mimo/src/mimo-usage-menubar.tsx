@@ -9,6 +9,7 @@ import {
 import { useCachedPromise } from "@raycast/utils";
 import { fetchMiMoUsage } from "./utils/mimo-api";
 import { MiMoUsageData, TokenUsageItem } from "./types/mimo-usage";
+import { AuthenticationError } from "./types/errors";
 
 const MIMO_CONSOLE_URL = "https://platform.xiaomimimo.com/console/plan-manage";
 
@@ -73,7 +74,7 @@ function formatTitle(data: MiMoUsageData | undefined): string {
 }
 
 export default function Command() {
-  const { data, isLoading, revalidate } = useCachedPromise(
+  const { data, isLoading, error, revalidate } = useCachedPromise(
     async () => {
       return fetchMiMoUsage();
     },
@@ -81,6 +82,7 @@ export default function Command() {
     { keepPreviousData: true },
   );
 
+  const isAuthError = error instanceof AuthenticationError;
   const title = formatTitle(data);
 
   return (
@@ -138,9 +140,34 @@ export default function Command() {
       ) : (
         <MenuBarExtra.Section>
           <MenuBarExtra.Item
-            icon={Icon.Warning}
-            title={isLoading ? "Loading..." : "Failed to load"}
+            icon={isAuthError ? Icon.Key : Icon.Warning}
+            title={
+              isLoading
+                ? "Loading..."
+                : isAuthError
+                  ? "Cookie expired"
+                  : "Failed to load"
+            }
           />
+          {isAuthError && (
+            <MenuBarExtra.Item
+              icon={Icon.Key}
+              title="Update Cookie"
+              onAction={() =>
+                launchCommand({
+                  name: "update-cookie",
+                  type: LaunchType.UserInitiated,
+                })
+              }
+            />
+          )}
+          {isAuthError && (
+            <MenuBarExtra.Item
+              icon={Icon.Globe}
+              title="Open MiMo Console"
+              onAction={() => open(MIMO_CONSOLE_URL)}
+            />
+          )}
           <MenuBarExtra.Item
             icon={Icon.Gear}
             title="Preferences"

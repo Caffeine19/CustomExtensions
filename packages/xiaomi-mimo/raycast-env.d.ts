@@ -20,6 +20,8 @@ declare namespace Preferences {
   export type ViewMimoUsage = ExtensionPreferences & {}
   /** Preferences accessible in the `mimo-usage-menubar` command */
   export type MimoUsageMenubar = ExtensionPreferences & {}
+  /** Preferences accessible in the `update-cookie` command */
+  export type UpdateCookie = ExtensionPreferences & {}
 }
 
 declare namespace Arguments {
@@ -27,5 +29,7 @@ declare namespace Arguments {
   export type ViewMimoUsage = {}
   /** Arguments passed to the `mimo-usage-menubar` command */
   export type MimoUsageMenubar = {}
+  /** Arguments passed to the `update-cookie` command */
+  export type UpdateCookie = {}
 }
 
