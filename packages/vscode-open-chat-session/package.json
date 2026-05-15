@@ -7,11 +7,12 @@
   "engines": {
     "vscode": "^1.100.0"
   },
+  "icon": "icon.png",
   "categories": [
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished"
+    "onUri"
   ],
   "main": "./out/extension.js",
   "contributes": {},
@@ -21,6 +22,7 @@
     "watch": "tsc -watch -p ./"
   },
   "devDependencies": {
+    "@types/node": "^25.7.0",
     "@types/vscode": "^1.100.0",
     "typescript": "^5.8.2"
   }

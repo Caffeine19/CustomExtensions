@@ -1,10 +1,10 @@
 import { getPreferenceValues } from "@raycast/api";
-import { readdirSync, readFileSync, existsSync, writeFileSync } from "fs";
+import { readdirSync, readFileSync, existsSync, writeFileSync, statSync } from "fs";
 import { join, basename } from "path";
 import { homedir } from "os";
-import { execSync } from "child_process";
+import { execSync, spawn } from "child_process";
 import { Effect, pipe, Data } from "effect";
-import { ChatSessionIndex, ChatStatus, ResolvedChatSession, VSCodeVariant } from "../types/session";
+import { ChatStatus, ResolvedChatSession, VSCodeVariant } from "../types/session";
 
 // ── Error types ──────────────────────────────────────────────────────────────
 
@@ -76,25 +76,176 @@ function readWorkspaceInfo(wsDir: string): WorkspaceInfo | null {
   }
 }
 
-// ── Session index reader ─────────────────────────────────────────────────────
+// ── JSONL / JSON session file reader ─────────────────────────────────────────
 
-function readSessionIndex(dbPath: string): Effect.Effect<ChatSessionIndex | null, SessionReadError> {
-  return Effect.try({
-    try: () => {
-      const result = execSync(
-        `sqlite3 "${dbPath}" "SELECT value FROM ItemTable WHERE key='chat.ChatSessionStore.index'"`,
-        { encoding: "utf-8", timeout: 5000 },
-      ).trim();
+interface SerializedRequestMinimal {
+  timestamp?: number;
+  timeSpentWaiting?: number;
+  modelState?: { value: number; completedAt?: number };
+}
 
-      if (!result) return null;
-      return JSON.parse(result) as ChatSessionIndex;
-    },
-    catch: (cause) =>
-      new SessionReadError({
-        cause,
-        message: `Failed to read session index from ${dbPath}`,
-      }),
-  });
+interface SerializedChatDataMinimal {
+  sessionId?: string;
+  creationDate?: number;
+  customTitle?: string;
+  initialLocation?: string;
+  hasPendingEdits?: boolean;
+  requests?: SerializedRequestMinimal[];
+}
+
+interface RawSessionMetadata {
+  sessionId: string;
+  created: number;
+  lastMessageDate: number;
+  customTitle: string | undefined;
+  isEmpty: boolean;
+  hasPendingEdits: boolean;
+  initialLocation: string | undefined;
+  lastResponseState: number | undefined;
+  lastRequestStarted: number | undefined;
+  lastRequestEnded: number | undefined;
+}
+
+/**
+ * Compute RawSessionMetadata from the initial serialized state plus any
+ * mutation log entries (JSONL lines after the first Initial entry).
+ *
+ * Tracked fields:
+ *   - customTitle    (kind=1, k=["customTitle"])
+ *   - hasPendingEdits (kind=1, k=["hasPendingEdits"])
+ *   - requests array  (kind=2, k=["requests"]) — new requests pushed
+ *   - request modelState (kind=1, k=["requests",N,"modelState"]) — completion state
+ */
+function extractMetadataFromMutations(
+  initial: SerializedChatDataMinimal,
+  mutations: Array<{ kind: number; k?: (string | number)[]; v?: unknown; i?: number }>,
+): RawSessionMetadata | null {
+  if (!initial.sessionId) return null;
+
+  let customTitle = initial.customTitle;
+  let hasPendingEdits = initial.hasPendingEdits ?? false;
+  const requests: SerializedRequestMinimal[] = [...(initial.requests ?? [])];
+
+  for (const entry of mutations) {
+    const k = entry.k;
+    if (!k) continue;
+
+    if (entry.kind === 1) {
+      // Set operation
+      if (k.length === 1) {
+        if (k[0] === "customTitle") customTitle = entry.v as string | undefined;
+        else if (k[0] === "hasPendingEdits") hasPendingEdits = entry.v as boolean;
+      } else if (k.length === 3 && k[0] === "requests" && k[2] === "modelState") {
+        const idx = k[1] as number;
+        if (requests[idx]) {
+          requests[idx] = { ...requests[idx], modelState: entry.v as { value: number; completedAt?: number } };
+        }
+      }
+    } else if (entry.kind === 2 && k.length === 1 && k[0] === "requests") {
+      // Push to requests array; optional i = splice-from index
+      if (entry.i !== undefined) requests.splice(entry.i as number);
+      const pushed = entry.v as SerializedRequestMinimal[] | undefined;
+      if (pushed) {
+        for (const item of pushed) requests.push(item);
+      }
+    }
+  }
+
+  const lastRequest = requests.length > 0 ? requests[requests.length - 1] : undefined;
+  const lastMessageDate = lastRequest?.timestamp ?? initial.creationDate ?? 0;
+  // lastRequestEnded mirrors ChatModel.timing: completedAt (set on finish) or response.timestamp (near-zero diff = in-progress)
+  const lastRequestEnded = lastRequest?.modelState?.completedAt ?? lastRequest?.timeSpentWaiting;
+
+  return {
+    sessionId: initial.sessionId,
+    created: initial.creationDate ?? 0,
+    lastMessageDate,
+    customTitle,
+    isEmpty: requests.length === 0,
+    hasPendingEdits,
+    initialLocation: initial.initialLocation,
+    lastResponseState: lastRequest?.modelState?.value,
+    lastRequestStarted: lastRequest?.timestamp,
+    lastRequestEnded,
+  };
+}
+
+const MAX_JSONL_FILE_SIZE = 10 * 1024 * 1024; // 10 MB — skip files larger than this
+
+function readSessionFromJsonl(filePath: string): RawSessionMetadata | null {
+  try {
+    // Guard against very large files that could exhaust Raycast process memory
+    if (statSync(filePath).size > MAX_JSONL_FILE_SIZE) return null;
+    const content = readFileSync(filePath, "utf-8");
+    const lines = content.split("\n");
+    let initial: SerializedChatDataMinimal | null = null;
+    const mutations: Array<{ kind: number; k?: (string | number)[]; v?: unknown; i?: number }> = [];
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      try {
+        const entry = JSON.parse(line) as { kind: number; k?: (string | number)[]; v?: unknown; i?: number };
+        if (entry.kind === 0) {
+          initial = entry.v as SerializedChatDataMinimal;
+        } else {
+          mutations.push(entry);
+        }
+      } catch {
+        // skip malformed line, continue with rest of file
+      }
+    }
+
+    if (!initial) return null;
+    return extractMetadataFromMutations(initial, mutations);
+  } catch {
+    return null;
+  }
+}
+
+function readSessionFromJson(filePath: string): RawSessionMetadata | null {
+  try {
+    const data = JSON.parse(readFileSync(filePath, "utf-8")) as SerializedChatDataMinimal;
+    return extractMetadataFromMutations(data, []);
+  } catch {
+    return null;
+  }
+}
+
+// ── Archived session IDs (still from state.vscdb) ────────────────────────────
+
+interface AgentSessionCacheEntry {
+  resource: string;
+  archived?: boolean;
+}
+
+/**
+ * Read the agentSessions.state.cache from state.vscdb.
+ * Returns the set of session IDs that are archived.
+ */
+function readArchivedSessionIds(dbPath: string): Set<string> {
+  const archived = new Set<string>();
+  try {
+    const result = execSync(`sqlite3 "${dbPath}" "SELECT value FROM ItemTable WHERE key='agentSessions.state.cache'"`, {
+      encoding: "utf-8",
+      timeout: 5000,
+    }).trim();
+
+    if (!result) return archived;
+
+    const cache = JSON.parse(result) as AgentSessionCacheEntry[];
+    for (const entry of cache) {
+      if (!entry.archived) continue;
+      // Parse session ID from vscode-chat-session://local/<base64url-id>
+      const match = entry.resource.match(/^vscode-chat-session:\/\/local\/(.+)$/);
+      if (match) {
+        const sessionId = Buffer.from(match[1], "base64url").toString("utf-8");
+        archived.add(sessionId);
+      }
+    }
+  } catch {
+    // cache may not exist in older workspaces
+  }
+  return archived;
 }
 
 // ── Chat status derivation ───────────────────────────────────────────────────
@@ -172,59 +323,85 @@ function deriveChatStatus(
 // ── Load all sessions ────────────────────────────────────────────────────────
 
 function loadSessionsFromStorage(variant: VSCodeVariant): Effect.Effect<ResolvedChatSession[], SessionReadError> {
-  return Effect.gen(function* () {
-    const storageDir = getWorkspaceStorageDir(variant);
+  return Effect.try({
+    try: () => {
+      const storageDir = getWorkspaceStorageDir(variant);
+      if (!existsSync(storageDir)) return [];
 
-    if (!existsSync(storageDir)) return [];
+      const workspaceDirs = readdirSync(storageDir, { withFileTypes: true }).filter((d) => d.isDirectory());
+      const sessions: ResolvedChatSession[] = [];
+      const customTitles = readCustomTitles(variant);
 
-    const workspaceDirs = readdirSync(storageDir, {
-      withFileTypes: true,
-    }).filter((d) => d.isDirectory());
+      for (const wsEntry of workspaceDirs) {
+        try {
+          const wsDir = join(storageDir, wsEntry.name);
+          const wsInfo = readWorkspaceInfo(wsDir);
+          if (!wsInfo) continue;
 
-    const sessions: ResolvedChatSession[] = [];
-    const customTitles = readCustomTitles(variant);
+          const chatSessionsDir = join(wsDir, "chatSessions");
+          if (!existsSync(chatSessionsDir)) continue;
 
-    for (const wsEntry of workspaceDirs) {
-      const wsDir = join(storageDir, wsEntry.name);
-      const wsInfo = readWorkspaceInfo(wsDir);
-      if (!wsInfo) continue;
+          // Archived IDs are intentionally not loaded here: calling execSync(sqlite3)
+          // for every workspace in a tight loop spawns hundreds of subprocesses and
+          // causes Raycast to kill the extension process ("connection closed").
+          // Archive status can be surfaced lazily on demand if needed.
+          const archivedIds = new Set<string>();
 
-      const dbPath = join(wsDir, "state.vscdb");
-      if (!existsSync(dbPath)) continue;
+          // Enumerate session files; prefer .jsonl over .json for the same base name
+          const files = readdirSync(chatSessionsDir).filter((f) => f.endsWith(".jsonl") || f.endsWith(".json"));
+          const sessionFiles = new Map<string, string>(); // sessionId → filePath
+          for (const file of files) {
+            const id = file.slice(0, file.lastIndexOf("."));
+            if (!sessionFiles.has(id) || file.endsWith(".jsonl")) {
+              sessionFiles.set(id, join(chatSessionsDir, file));
+            }
+          }
 
-      const index = yield* readSessionIndex(dbPath);
-      if (!index?.entries) continue;
+          for (const [, filePath] of sessionFiles) {
+            try {
+              const meta = filePath.endsWith(".jsonl") ? readSessionFromJsonl(filePath) : readSessionFromJson(filePath);
+              if (!meta) continue;
 
-      for (const [sessionId, meta] of Object.entries(index.entries)) {
-        const sessionFilePath = join(wsDir, "chatSessions", `${sessionId}.jsonl`);
-        const created = new Date(meta.timing?.created || meta.lastMessageDate || 0);
-        const lastMessageDate = new Date(meta.lastMessageDate || 0);
+              const chatStatus = archivedIds.has(meta.sessionId)
+                ? "archived"
+                : deriveChatStatus(
+                    meta.isEmpty,
+                    meta.lastRequestStarted,
+                    meta.lastRequestEnded,
+                    meta.lastResponseState,
+                  );
 
-        sessions.push({
-          sessionId,
-          title: customTitles[sessionId] || meta.title || "Untitled",
-          created,
-          lastMessageDate,
-          chatStatus: deriveChatStatus(
-            meta.isEmpty,
-            meta.timing?.lastRequestStarted,
-            meta.timing?.lastRequestEnded,
-            meta.lastResponseState,
-          ),
-          hasPendingEdits: meta.hasPendingEdits ?? false,
-          workspacePath: wsInfo.folderPath,
-          workspaceName: wsInfo.folderName,
-          workspaceHash: wsInfo.hash,
-          sessionFilePath,
-          initialLocation: meta.initialLocation,
-          lastResponseState: meta.lastResponseState,
-        });
+              sessions.push({
+                sessionId: meta.sessionId,
+                title: customTitles[meta.sessionId] || meta.customTitle || "Untitled",
+                created: new Date(meta.created),
+                lastMessageDate: new Date(meta.lastMessageDate),
+                chatStatus,
+                hasPendingEdits: meta.hasPendingEdits,
+                workspacePath: wsInfo.folderPath,
+                workspaceName: wsInfo.folderName,
+                workspaceHash: wsInfo.hash,
+                sessionFilePath: filePath,
+                initialLocation: meta.initialLocation,
+                lastResponseState: meta.lastResponseState,
+              });
+            } catch {
+              // skip this session file, continue with others
+            }
+          }
+        } catch {
+          // skip this workspace, continue with others
+        }
       }
-    }
 
-    sessions.sort((a, b) => b.lastMessageDate.getTime() - a.lastMessageDate.getTime());
-
-    return sessions;
+      sessions.sort((a, b) => b.lastMessageDate.getTime() - a.lastMessageDate.getTime());
+      return sessions;
+    },
+    catch: (cause) =>
+      new SessionReadError({
+        cause,
+        message: "Failed to load sessions from workspace storage",
+      }),
   });
 }
 
@@ -295,24 +472,26 @@ export function renameSession(session: ResolvedChatSession, newTitle: string): P
 /**
  * Open a chat session via the companion VS Code extension.
  *
- * Writes the session ID to `~/.vscode-chat-session-pending`, then opens the
- * workspace in VS Code. The companion extension watches for this file and
- * opens the session via `vscode-chat-session://` URI.
+ * Sends the request directly to the extension URI handler. The companion
+ * extension decides whether to activate an existing editor tab or open the
+ * session in the chat sidebar.
  */
 export async function openSessionViaUriHandler(session: ResolvedChatSession): Promise<void> {
-  const pendingPath = join(homedir(), ".vscode-chat-session-pending");
-  writeFileSync(pendingPath, session.sessionId, "utf-8");
-
   const variant = getVariant();
-  const cliCommand = variant === "insiders" ? "code-insiders" : "code";
+  const scheme = variant === "insiders" ? "vscode-insiders" : "vscode";
+  const encodedId = Buffer.from(session.sessionId, "utf-8").toString("base64url");
+  const encodedWorkspace = encodeURIComponent(session.workspacePath);
+  const encodedTitle = encodeURIComponent(session.title);
+  const url = `${scheme}://CaffeineCat.open-chat-session/open?session=${encodedId}&workspace=${encodedWorkspace}&title=${encodedTitle}`;
 
   try {
-    execSync(`${cliCommand} "${session.workspacePath}"`, {
-      timeout: 5000,
+    const child = spawn("open", [url], {
+      detached: true,
       stdio: "ignore",
     });
+    child.unref();
   } catch {
-    throw new Error(`Could not open workspace. Is ${cliCommand} in your PATH?`);
+    throw new Error("Could not open chat session via the VS Code URI handler.");
   }
 }
 

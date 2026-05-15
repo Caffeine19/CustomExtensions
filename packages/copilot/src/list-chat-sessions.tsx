@@ -1,30 +1,50 @@
 import {
-    ActionPanel,
-    Action,
-    Form,
-    Icon,
-    List,
-    LocalStorage,
-    showToast,
-    Toast,
-    Color,
-    Clipboard,
-    closeMainWindow,
+  ActionPanel,
+  Action,
+  Form,
+  Icon,
+  List,
+  LocalStorage,
+  showToast,
+  Toast,
+  Color,
+  Clipboard,
+  closeMainWindow,
 } from "@raycast/api";
-import { usePromise } from "@raycast/utils";
+import { useCachedPromise } from "@raycast/utils";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import updateLocale from "dayjs/plugin/updateLocale";
 import { useState, useMemo, useEffect } from "react";
 import {
-    loadAllSessions,
-    openSessionViaUriHandler,
-    openWorkspaceInVSCode,
-    openSessionFile,
-    renameSession,
+  loadAllSessions,
+  openSessionViaUriHandler,
+  openWorkspaceInVSCode,
+  openSessionFile,
+  renameSession,
 } from "./utils/session-reader";
 import { ChatStatus, ResolvedChatSession } from "./types/session";
 
 dayjs.extend(relativeTime);
+dayjs.extend(updateLocale);
+dayjs.updateLocale("en", {
+  relativeTime: {
+    future: "in %s",
+    past: "%s ago",
+    s: "a few secs",
+    ss: "%d secs",
+    m: "1 min",
+    mm: "%d mins",
+    h: "1 hr",
+    hh: "%d hrs",
+    d: "a day",
+    dd: "%d days",
+    M: "a month",
+    MM: "%d months",
+    y: "a year",
+    yy: "%d years",
+  },
+});
 
 /**
  * Categorize a session into a time-based group based on its last update time.
@@ -53,7 +73,7 @@ const STATUS_CONFIG: Record<ChatStatus, { label: string; icon: Icon; color: Colo
   "in-progress": {
     label: "Active",
     icon: Icon.CircleProgress,
-    color: Color.Orange,
+    color: Color.Blue,
   },
   completed: {
     label: "Done",
@@ -69,6 +89,11 @@ const STATUS_CONFIG: Record<ChatStatus, { label: string; icon: Icon; color: Colo
     label: "Input",
     icon: Icon.QuestionMark,
     color: Color.Yellow,
+  },
+  archived: {
+    label: "Archived",
+    icon: Icon.Tray,
+    color: Color.Blue,
   },
 };
 
@@ -90,7 +115,7 @@ export default function Command() {
     LocalStorage.setItem(STORAGE_KEY, value);
   };
 
-  const { data: sessions, isLoading, error, revalidate } = usePromise(async () => loadAllSessions(), []);
+  const { data: sessions, isLoading, error, revalidate } = useCachedPromise(loadAllSessions, []);
 
   if (error) {
     showToast({

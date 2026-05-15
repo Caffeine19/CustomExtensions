@@ -1,30 +1,46 @@
 import { getPreferenceValues, LocalStorage } from "@raycast/api";
 import { MiMoApiResponse, MiMoUsageData } from "../types/mimo-usage";
 import { AuthenticationError, MiMoApiError } from "../types/errors";
+import dns from "dns/promises";
 
-const API_URL = "https://platform.xiaomimimo.com/api/v1/tokenPlan/usage";
+const API_HOST = "platform.xiaomimimo.com";
+const API_PATH = "/api/v1/tokenPlan/usage";
+
+// Raycast's sandboxed Node.js runtime may block getaddrinfo (macOS mDNSResponder socket),
+// causing ENOTFOUND even when the domain is valid. Use c-ares (dns.resolve4) as fallback.
+async function resolveApiUrl(): Promise<string> {
+  try {
+    // Try normal resolution first (fast path when DNS works)
+    const addrs = await dns.resolve4(API_HOST);
+    if (addrs.length > 0) {
+      return `https://${addrs[0]}${API_PATH}`;
+    }
+  } catch {
+    // c-ares resolution failed too, fall back to hostname (may work in some envs)
+  }
+  return `https://${API_HOST}${API_PATH}`;
+}
 
 async function getCookie(): Promise<string> {
   const stored = await LocalStorage.getItem<string>("cookie");
-  if (stored) return stored;
-  const prefs = getPreferenceValues<{ cookie: string }>();
-  return prefs.cookie;
+  const raw = stored ?? getPreferenceValues<{ cookie: string }>().cookie;
+  // Strip "Cookie: " prefix if user copied the full header line
+  return raw.replace(/^Cookie:\s*/i, "").trim();
 }
 
 export async function fetchMiMoUsage(): Promise<MiMoUsageData> {
   const cookie = await getCookie();
+  const url = await resolveApiUrl();
 
-  const response = await fetch(API_URL, {
+  const response = await fetch(url, {
     method: "GET",
     headers: {
       accept: "*/*",
-      "accept-language": "zh",
       "content-type": "application/json",
       cookie,
-      referer: "https://platform.xiaomimimo.com/console/plan-manage",
+      host: API_HOST,
       "user-agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36 Edg/147.0.0.0",
-      "x-timezone": "Asia/Shanghai",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.0.0 Safari/537.36 Edg/148.0.0.0",
     },
   });
   console.log("API Response:", response);

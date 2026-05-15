@@ -34,7 +34,7 @@ export interface ChatSessionIndex {
  *
  * "empty" is a local-only status for sessions with no messages.
  */
-export type ChatStatus = "empty" | "in-progress" | "completed" | "failed" | "needs-input";
+export type ChatStatus = "empty" | "in-progress" | "completed" | "failed" | "needs-input" | "archived";
 
 /** A fully resolved chat session with workspace info */
 export interface ResolvedChatSession {

@@ -59,11 +59,14 @@ export function searchBugs(bugs: BugListItem[], query: string): BugListItem[] {
   // 创建 Fuse 搜索
   const fuse = new Fuse(bugs, {
     threshold: 0.4, // 模糊匹配阈值
-    keys: ["title", "product", "assignedTo", "status", "openedBy"], // 搜索字段
+    keys: ["id", "title", "product", "assignedTo", "status", "openedBy"], // 搜索字段
   });
 
   // 模糊搜索结果
   const fuseResults = fuse.search(query).map((result) => result.item);
+
+  // Bug ID 直接匹配（支持前缀匹配，如搜索 "12" 可匹配 "123"）
+  const idResults = bugs.filter((bug) => bug.id.startsWith(query));
 
   // 拼音搜索结果
   const pinyinResults = bugs.filter((bug) => {
@@ -77,8 +80,8 @@ export function searchBugs(bugs: BugListItem[], query: string): BugListItem[] {
     });
   });
 
-  // 合并去重
-  const allResults = [...fuseResults, ...pinyinResults];
+  // 合并去重（ID 直接匹配优先）
+  const allResults = [...idResults, ...fuseResults, ...pinyinResults];
   const uniqueResults = allResults.filter((bug, index, arr) => arr.findIndex((b) => b.id === bug.id) === index);
 
   return uniqueResults;
