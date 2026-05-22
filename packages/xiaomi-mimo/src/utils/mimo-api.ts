@@ -1,25 +1,9 @@
 import { getPreferenceValues, LocalStorage } from "@raycast/api";
 import { MiMoApiResponse, MiMoUsageData } from "../types/mimo-usage";
 import { AuthenticationError, MiMoApiError } from "../types/errors";
-import dns from "dns/promises";
 
+const API_URL = "https://platform.xiaomimimo.com/api/v1/tokenPlan/usage";
 const API_HOST = "platform.xiaomimimo.com";
-const API_PATH = "/api/v1/tokenPlan/usage";
-
-// Raycast's sandboxed Node.js runtime may block getaddrinfo (macOS mDNSResponder socket),
-// causing ENOTFOUND even when the domain is valid. Use c-ares (dns.resolve4) as fallback.
-async function resolveApiUrl(): Promise<string> {
-  try {
-    // Try normal resolution first (fast path when DNS works)
-    const addrs = await dns.resolve4(API_HOST);
-    if (addrs.length > 0) {
-      return `https://${addrs[0]}${API_PATH}`;
-    }
-  } catch {
-    // c-ares resolution failed too, fall back to hostname (may work in some envs)
-  }
-  return `https://${API_HOST}${API_PATH}`;
-}
 
 async function getCookie(): Promise<string> {
   const stored = await LocalStorage.getItem<string>("cookie");
@@ -30,9 +14,8 @@ async function getCookie(): Promise<string> {
 
 export async function fetchMiMoUsage(): Promise<MiMoUsageData> {
   const cookie = await getCookie();
-  const url = await resolveApiUrl();
 
-  const response = await fetch(url, {
+  const response = await fetch(API_URL, {
     method: "GET",
     headers: {
       accept: "*/*",
