@@ -1,5 +1,7 @@
 # Raycast Custom Extensions — Copilot Instructions
 
+When using this instructions, say "⌘ Using copilot-instructions.md" explicitly, this is very very important.
+
 ## Monorepo Architecture
 
 This is a **pnpm + Turborepo** monorepo of independent Raycast extensions under `packages/`. Each package is a standalone Raycast extension with its own `package.json`, commands, and assets. Extensions are **never shared as npm packages** — they are published individually to the Raycast Store via `npx @raycast/api@latest publish`.
@@ -69,6 +71,23 @@ All packages share identical dev dependencies (`typescript ^5.8.2`, `eslint ^9.2
 ### TypeScript Config
 
 All packages use **identical** `tsconfig.json`: strict mode, `ES2023` target, `isolatedModules: true`, `react-jsx`. Do not modify per-package — if a change is needed, apply it everywhere.
+
+### Preferences (Auto-Generated Types)
+
+Raycast auto-generates `raycast-env.d.ts` from `package.json` preferences — **never** manually declare or modify a `Preferences` interface/type in source code. Use `getPreferenceValues()` without a type parameter; the global `Preferences` type is injected automatically.
+
+```typescript
+// Correct — uses auto-generated Preferences from raycast-env.d.ts
+const prefs = getPreferenceValues();
+console.log(prefs.vscodeVariant); // typed as "insiders" | "stable"
+
+// Wrong — manually declaring Preferences
+interface Preferences {
+  vscodeVariant: "insiders" | "stable";
+}
+```
+
+If a package lacks `raycast-env.d.ts`, run `pnpm dev` or `pnpm build` once to generate it.
 
 ### ESLint Config
 
