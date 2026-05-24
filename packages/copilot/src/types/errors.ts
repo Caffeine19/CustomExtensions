@@ -16,3 +16,22 @@ export class OAuthDeviceFlowError extends TaggedError("OAuthDeviceFlowError")<{
 export class StorageError extends TaggedError("StorageError")<{
   message: string;
 }> {}
+
+export class SessionReadError extends TaggedError("SessionReadError")<{
+  message: string;
+  cause: unknown;
+}> {}
+
+export class SessionWriteError extends TaggedError("SessionWriteError")<{
+  message: string;
+  cause: unknown;
+}> {}
+
+export class EmptyPromptError extends TaggedError("EmptyPromptError")<{
+  message: string;
+}> {}
+
+export class VSCodeLaunchError extends TaggedError("VSCodeLaunchError")<{
+  message: string;
+  cause: unknown;
+}> {}

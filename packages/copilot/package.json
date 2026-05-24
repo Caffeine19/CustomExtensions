@@ -24,6 +24,13 @@
       "subtitle": "VS Code Copilot",
       "description": "Browse all local VS Code Copilot chat sessions and open them in their workspace.",
       "mode": "view"
+    },
+    {
+      "name": "quick-chat",
+      "title": "Quick Chat",
+      "subtitle": "GitHub Copilot",
+      "description": "Start a quick GitHub Copilot chat session from Raycast.",
+      "mode": "view"
     }
   ],
   "preferences": [

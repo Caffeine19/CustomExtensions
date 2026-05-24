@@ -24,7 +24,6 @@ export default function AccountListItem({
 }: {
   item: AccountData;
   onRemove: (login: string) => void;
-  onRefresh: () => void;
   onAdd: () => void;
 }) {
   const { account, user, email, usage } = item;

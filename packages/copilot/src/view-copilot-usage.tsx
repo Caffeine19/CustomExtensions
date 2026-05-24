@@ -1,8 +1,8 @@
 import { ActionPanel, Action, Icon, List, showToast, Toast } from "@raycast/api";
 import { usePromise } from "@raycast/utils";
 import { useCallback, useState } from "react";
-import { gen, all, catchAll, succeed, runPromise, runPromiseExit } from "effect/Effect";
-import { isSuccess } from "effect/Exit";
+import { gen, all, catchAll, succeed, runPromise, either } from "effect/Effect";
+import { isLeft } from "effect/Either";
 import { fetchCopilotUsage, fetchGithubEmail, fetchGitHubUser } from "./utils/copilot-api";
 import { addAccount, getStoredAccounts, removeAccount, StoredAccount } from "./utils/token-storage";
 import { startDeviceFlow } from "./utils/github-oauth";
@@ -32,7 +32,7 @@ const loadAccountData = (account: StoredAccount) =>
 export default function Command() {
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const { data, isLoading, revalidate } = usePromise(
+  const { data, isLoading } = usePromise(
     async (key: number) => {
       void key;
       const accounts = await runPromise(getStoredAccounts);
@@ -61,17 +61,17 @@ export default function Command() {
       return user.login;
     });
 
-    const exit = await runPromiseExit(program);
+    const result = await runPromise(either(program));
 
-    if (isSuccess(exit)) {
+    if (isLeft(result)) {
       toast.style = Toast.Style.Success;
       toast.title = "Signed in";
-      toast.message = exit.value;
+      toast.message = result.left;
       setRefreshKey((k) => k + 1);
     } else {
       toast.style = Toast.Style.Failure;
       toast.title = "Sign in failed";
-      toast.message = String(exit.cause);
+      toast.message = String(result.right);
     }
   }, []);
 
@@ -102,7 +102,6 @@ export default function Command() {
             key={item.account.login}
             item={item}
             onRemove={handleRemoveAccount}
-            onRefresh={revalidate}
             onAdd={handleAddAccount}
           />
         ))

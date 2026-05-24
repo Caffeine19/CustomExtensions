@@ -1,33 +1,13 @@
-import { getPreferenceValues } from "@raycast/api";
 import { readdirSync, readFileSync, existsSync, writeFileSync, statSync } from "fs";
 import { join, basename } from "path";
 import { homedir } from "os";
 import { execSync, spawn } from "child_process";
-import { Effect, pipe, Data } from "effect";
+import { Effect, pipe } from "effect";
 import { ChatStatus, ResolvedChatSession, VSCodeVariant } from "../types/session";
-
-// ── Error types ──────────────────────────────────────────────────────────────
-
-class SessionReadError extends Data.TaggedError("SessionReadError")<{
-  readonly cause: unknown;
-  readonly message: string;
-}> {}
-
-class SessionWriteError extends Data.TaggedError("SessionWriteError")<{
-  readonly cause: unknown;
-  readonly message: string;
-}> {}
+import { SessionReadError, SessionWriteError, VSCodeLaunchError } from "../types/errors";
+import { getVariant, getCliCommand, getScheme } from "./vscode";
 
 // ── Preferences ──────────────────────────────────────────────────────────────
-
-interface Preferences {
-  vscodeVariant: VSCodeVariant;
-}
-
-function getVariant(): VSCodeVariant {
-  const prefs = getPreferenceValues<Preferences>();
-  return prefs.vscodeVariant || "insiders";
-}
 
 function getAppSupportDir(variant: VSCodeVariant): string {
   const home = homedir();
@@ -222,6 +202,7 @@ interface AgentSessionCacheEntry {
  * Read the agentSessions.state.cache from state.vscdb.
  * Returns the set of session IDs that are archived.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Kept for future use; currently causes Raycast to kill the extension
 function readArchivedSessionIds(dbPath: string): Set<string> {
   const archived = new Set<string>();
   try {
@@ -455,16 +436,11 @@ function writeCustomTitles(variant: VSCodeVariant, titles: CustomTitles): Effect
 
 // ── Rename session ───────────────────────────────────────────────────────────
 
-export function renameSession(session: ResolvedChatSession, newTitle: string): Promise<void> {
+export function renameSession(session: ResolvedChatSession, newTitle: string): Effect.Effect<void, SessionWriteError> {
   const variant = getVariant();
   const titles = readCustomTitles(variant);
   titles[session.sessionId] = newTitle;
-  return Effect.runPromise(
-    pipe(
-      writeCustomTitles(variant, titles),
-      Effect.catchAll((err: SessionWriteError) => Effect.fail(new Error(`${err.message}: ${err.cause}`))),
-    ),
-  );
+  return writeCustomTitles(variant, titles);
 }
 
 // ── Open session ─────────────────────────────────────────────────────────────
@@ -476,51 +452,54 @@ export function renameSession(session: ResolvedChatSession, newTitle: string): P
  * extension decides whether to activate an existing editor tab or open the
  * session in the chat sidebar.
  */
-export async function openSessionViaUriHandler(session: ResolvedChatSession): Promise<void> {
-  const variant = getVariant();
-  const scheme = variant === "insiders" ? "vscode-insiders" : "vscode";
-  const encodedId = Buffer.from(session.sessionId, "utf-8").toString("base64url");
-  const encodedWorkspace = encodeURIComponent(session.workspacePath);
-  const encodedTitle = encodeURIComponent(session.title);
-  const url = `${scheme}://CaffeineCat.open-chat-session/open?session=${encodedId}&workspace=${encodedWorkspace}&title=${encodedTitle}`;
-
-  try {
-    const child = spawn("open", [url], {
-      detached: true,
-      stdio: "ignore",
-    });
-    child.unref();
-  } catch {
-    throw new Error("Could not open chat session via the VS Code URI handler.");
-  }
-}
+export const openSessionViaUriHandler = (session: ResolvedChatSession): Effect.Effect<void, VSCodeLaunchError> =>
+  Effect.try({
+    try: () => {
+      const scheme = getScheme();
+      const encodedId = Buffer.from(session.sessionId, "utf-8").toString("base64url");
+      const encodedWorkspace = encodeURIComponent(session.workspacePath);
+      const encodedTitle = encodeURIComponent(session.title);
+      const url = `${scheme}://CaffeineCat.open-chat-session/open?session=${encodedId}&workspace=${encodedWorkspace}&title=${encodedTitle}`;
+      const child = spawn("open", [url], { detached: true, stdio: "ignore" });
+      child.unref();
+    },
+    catch: (cause) =>
+      new VSCodeLaunchError({
+        message: "Could not open chat session via the VS Code URI handler.",
+        cause,
+      }),
+  });
 
 /**
  * Open the workspace folder in VS Code without opening a specific session.
  */
-export function openWorkspaceInVSCode(session: ResolvedChatSession): void {
-  const variant = getVariant();
-  const cliCommand = variant === "insiders" ? "code-insiders" : "code";
-
-  try {
-    execSync(`${cliCommand} "${session.workspacePath}"`, {
-      timeout: 5000,
-      stdio: "ignore",
-    });
-  } catch {
-    throw new Error(`Could not open workspace. Is ${cliCommand} in your PATH?`);
-  }
-}
+export const openWorkspaceInVSCode = (session: ResolvedChatSession): Effect.Effect<void, VSCodeLaunchError> =>
+  Effect.try({
+    try: () => {
+      const cliCommand = getCliCommand();
+      execSync(`${cliCommand} "${session.workspacePath}"`, { timeout: 5000, stdio: "ignore" });
+    },
+    catch: (cause) =>
+      new VSCodeLaunchError({
+        message: `Could not open workspace. Is ${getCliCommand()} in your PATH?`,
+        cause,
+      }),
+  });
 
 /**
  * Open the raw .jsonl session file in the default editor.
  */
-export function openSessionFile(session: ResolvedChatSession): void {
-  if (!existsSync(session.sessionFilePath)) {
-    throw new Error("Session file not found: " + session.sessionFilePath);
-  }
-  execSync(`open "${session.sessionFilePath}"`, {
-    timeout: 5000,
-    stdio: "ignore",
+export const openSessionFile = (session: ResolvedChatSession): Effect.Effect<void, VSCodeLaunchError> =>
+  Effect.try({
+    try: () => {
+      if (!existsSync(session.sessionFilePath)) {
+        throw new Error("Session file not found: " + session.sessionFilePath);
+      }
+      execSync(`open "${session.sessionFilePath}"`, { timeout: 5000, stdio: "ignore" });
+    },
+    catch: (cause) =>
+      new VSCodeLaunchError({
+        message: `Could not open session file: ${session.sessionFilePath}`,
+        cause,
+      }),
   });
-}

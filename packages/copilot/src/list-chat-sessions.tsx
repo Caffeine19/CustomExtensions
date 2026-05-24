@@ -16,6 +16,8 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import updateLocale from "dayjs/plugin/updateLocale";
 import { useState, useMemo, useEffect } from "react";
+import { Effect } from "effect";
+import { isLeft } from "effect/Either";
 import {
   loadAllSessions,
   openSessionViaUriHandler,
@@ -264,13 +266,12 @@ function SessionListItem({
               icon={Icon.Message}
               onAction={async () => {
                 await closeMainWindow();
-                try {
-                  await openSessionViaUriHandler(session);
-                } catch (e) {
+                const result = await Effect.runPromise(Effect.either(openSessionViaUriHandler(session)));
+                if (isLeft(result)) {
                   await showToast({
                     style: Toast.Style.Failure,
                     title: "Failed to open session",
-                    message: String(e),
+                    message: result.left.message,
                   });
                 }
               }}
@@ -281,13 +282,12 @@ function SessionListItem({
               shortcut={{ modifiers: ["cmd"], key: "o" }}
               onAction={async () => {
                 await closeMainWindow();
-                try {
-                  await openWorkspaceInVSCode(session);
-                } catch (e) {
+                const result = await Effect.runPromise(Effect.either(openWorkspaceInVSCode(session)));
+                if (isLeft(result)) {
                   await showToast({
                     style: Toast.Style.Failure,
                     title: "Failed to open workspace",
-                    message: String(e),
+                    message: result.left.message,
                   });
                 }
               }}
@@ -306,14 +306,13 @@ function SessionListItem({
               title="Open Session File"
               icon={Icon.Document}
               shortcut={{ modifiers: ["cmd", "shift"], key: "o" }}
-              onAction={() => {
-                try {
-                  openSessionFile(session);
-                } catch (e) {
-                  showToast({
+              onAction={async () => {
+                const result = await Effect.runPromise(Effect.either(openSessionFile(session)));
+                if (isLeft(result)) {
+                  await showToast({
                     style: Toast.Style.Failure,
                     title: "Failed",
-                    message: String(e),
+                    message: result.left.message,
                   });
                 }
               }}
@@ -377,7 +376,7 @@ function RenameSessionForm({ session, onRename }: { session: ResolvedChatSession
                 return;
               }
               try {
-                await renameSession(session, newTitle);
+                await Effect.runPromise(renameSession(session, newTitle));
                 await showToast({
                   style: Toast.Style.Success,
                   title: "Session renamed",
