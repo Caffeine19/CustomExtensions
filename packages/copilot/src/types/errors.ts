@@ -35,3 +35,8 @@ export class VSCodeLaunchError extends TaggedError("VSCodeLaunchError")<{
   message: string;
   cause: unknown;
 }> {}
+
+export class RecentProjectsError extends TaggedError("RecentProjectsError")<{
+  message: string;
+  cause?: unknown;
+}> {}

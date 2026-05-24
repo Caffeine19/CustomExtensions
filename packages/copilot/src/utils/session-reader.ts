@@ -391,10 +391,7 @@ export function loadAllSessions(): Promise<ResolvedChatSession[]> {
   return Effect.runPromise(
     pipe(
       loadSessionsFromStorage(variant),
-      Effect.catchAll((err) => {
-        console.error("[session-reader]", err.message, err.cause);
-        return Effect.succeed([] as ResolvedChatSession[]);
-      }),
+      Effect.catchAll(() => Effect.succeed([] as ResolvedChatSession[])),
     ),
   );
 }

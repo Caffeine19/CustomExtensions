@@ -64,14 +64,14 @@ export default function Command() {
     const result = await runPromise(either(program));
 
     if (isLeft(result)) {
-      toast.style = Toast.Style.Success;
-      toast.title = "Signed in";
-      toast.message = result.left;
-      setRefreshKey((k) => k + 1);
-    } else {
       toast.style = Toast.Style.Failure;
       toast.title = "Sign in failed";
-      toast.message = String(result.right);
+      toast.message = String(result.left);
+    } else {
+      toast.style = Toast.Style.Success;
+      toast.title = "Signed in";
+      toast.message = result.right;
+      setRefreshKey((k) => k + 1);
     }
   }, []);
 
