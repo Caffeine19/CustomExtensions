@@ -7,11 +7,6 @@ import { useState } from "react";
 import { ZhihuAnswer } from "./types/answer";
 import { buildAnswerUrl, fetchMyAnswers } from "./utils/zhihu-api";
 
-interface Preferences {
-  urlToken: string;
-  cookie: string;
-}
-
 function AnswerListItem({
   answer,
   isShowingDetail,
@@ -60,7 +55,7 @@ function AnswerListItem({
 }
 
 export default function Command() {
-  const { urlToken, cookie } = getPreferenceValues<Preferences>();
+  const { urlToken, cookie } = getPreferenceValues();
   const [isShowingDetail, setIsShowingDetail] = useState(false);
 
   const { data, isLoading } = usePromise(

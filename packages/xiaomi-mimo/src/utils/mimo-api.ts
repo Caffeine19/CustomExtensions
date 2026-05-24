@@ -23,7 +23,7 @@ async function resolveApiUrl(): Promise<string> {
 
 async function getCookie(): Promise<string> {
   const stored = await LocalStorage.getItem<string>("cookie");
-  const raw = stored ?? getPreferenceValues<{ cookie: string }>().cookie;
+  const raw = stored ?? getPreferenceValues().cookie;
   // Strip "Cookie: " prefix if user copied the full header line
   return raw.replace(/^Cookie:\s*/i, "").trim();
 }
