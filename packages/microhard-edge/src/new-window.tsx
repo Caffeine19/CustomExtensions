@@ -58,8 +58,6 @@ export default function NewWindowCommand() {
         </ActionPanel>
       }
     >
-      <Form.TextField id="url" title="URL (Optional)" placeholder="https://example.com" value={url} onChange={setUrl} />
-
       <Form.Dropdown id="profile" title="Profile" value={selectedProfile} onChange={setSelectedProfile}>
         {profiles.map((profile) => (
           <Form.Dropdown.Item key={profile.path} value={profile.path} title={profile.name} />

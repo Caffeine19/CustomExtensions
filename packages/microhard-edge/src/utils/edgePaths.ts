@@ -19,6 +19,14 @@ export const getEdgeDataPath = (): string => {
 };
 
 /**
+ * Get the path to the Edge Local State file which contains profile information
+ * @returns The full path to the Local State file
+ */
+export const getLocalStatePath = (): string => {
+  return `${getEdgeDataPath()}/Local State`;
+};
+
+/**
  * Get the path to the Edge Workspaces cache file for a specific profile
  * @param profilePath The profile directory name (e.g., "Default", "Profile 2")
  * @returns The full path to the WorkspacesCache file

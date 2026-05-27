@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
-  "name": "workspace",
-  "title": "Workspace",
+  "name": "microhard-edge",
+  "title": "Microhard Edge",
   "description": "Integrate with Microsoft Edge Workspaces.",
   "icon": "extension-icon-v2.png",
   "author": "CaffeineCat",
