@@ -65,7 +65,8 @@ function getTopUsageItem(data: MiMoUsageData): TokenUsageItem | undefined {
   );
 }
 
-function formatTitle(data: MiMoUsageData | undefined): string {
+function formatTitle(data: MiMoUsageData | undefined, error?: Error): string {
+  if (error instanceof AuthenticationError) return "Expired";
   if (!data) return "MiMo";
   const top = getTopUsageItem(data);
   if (!top) return "MiMo";
@@ -83,11 +84,11 @@ export default function Command() {
   );
 
   const isAuthError = error instanceof AuthenticationError;
-  const title = formatTitle(data);
+  const title = formatTitle(data, error ?? undefined);
 
   return (
     <MenuBarExtra
-      icon={Icon.Coins}
+      icon={isAuthError ? Icon.Warning : Icon.Coins}
       title={title}
       tooltip="Xiaomi MiMo Token Usage"
       isLoading={isLoading}
@@ -116,6 +117,16 @@ export default function Command() {
           </MenuBarExtra.Section>
           <MenuBarExtra.Section>
             <MenuBarExtra.Item
+              icon={Icon.RotateClockwise}
+              title="Refresh"
+              onAction={revalidate}
+            />
+            <MenuBarExtra.Item
+              icon={Icon.Globe}
+              title="Open Console"
+              onAction={() => open(MIMO_CONSOLE_URL)}
+            />
+            <MenuBarExtra.Item
               icon={Icon.ArrowsExpand}
               title="Open Full View"
               onAction={() =>
@@ -124,11 +135,6 @@ export default function Command() {
                   type: LaunchType.UserInitiated,
                 })
               }
-            />
-            <MenuBarExtra.Item
-              icon={Icon.RotateClockwise}
-              title="Refresh"
-              onAction={revalidate}
             />
             <MenuBarExtra.Item
               icon={Icon.Gear}
