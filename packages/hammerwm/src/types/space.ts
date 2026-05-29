@@ -10,6 +10,7 @@ export interface Window {
   id: string;
   title: string;
   application: string;
+  appPath?: string;
   isMinimized: boolean;
   isFullscreen: boolean;
   spaceId?: string;

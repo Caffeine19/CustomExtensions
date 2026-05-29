@@ -189,10 +189,12 @@ export async function getSpaceWindows(spaceId: Space["id"]): Promise<Window[]> {
         print("Processing window ID:", windowId, "Window found:", window ~= nil)
         if window and window:isStandard() then
             local app = window:application()
+            local appPath = app and app:path() or nil
             table.insert(windows, {
                 id = tostring(windowId),
                 title = window:title() or "Untitled",
                 application = app and app:name() or "Unknown",
+                appPath = appPath,
                 isMinimized = window:isMinimized(),
                 isFullscreen = window:isFullscreen()
             })
@@ -220,6 +222,7 @@ export async function getAllWindows(): Promise<Window[]> {
     for _, window in ipairs(allWindows) do
         local app = window:application()
         local appName = app and app:name() or "Unknown"
+        local appPath = app and app:path() or nil
         local windowTitle = window:title() or "Untitled"
         local frame = window:frame()
         
@@ -232,6 +235,7 @@ export async function getAllWindows(): Promise<Window[]> {
                 id = tostring(windowId),
                 title = windowTitle,
                 application = appName,
+                appPath = appPath,
                 isMinimized = window:isMinimized(),
                 isFullscreen = window:isFullscreen(),
                 spaceId = spaceId and tostring(spaceId) or nil

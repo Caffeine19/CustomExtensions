@@ -147,13 +147,30 @@ export const useSpaceStore = create<SpaceStore>((set, get) => ({
       spaceWindows: { ...state.spaceWindows, [spaceId]: windows },
     }));
 
-    // Fetch application icons for new applications
-    const newAppNames = windows
-      .map((window) => window.application)
-      .filter((appName) => !appIcons[appName]);
+    // First, use appPath from windows directly (more reliable for apps in non-standard locations)
+    const directAppIcons: Record<string, string> = {};
+    const appsNeedingLookup: string[] = [];
 
-    if (newAppNames.length > 0) {
-      get().fetchApplicationIcons(newAppNames);
+    for (const window of windows) {
+      if (appIcons[window.application]) continue; // Already have this icon
+
+      if (window.appPath) {
+        directAppIcons[window.application] = window.appPath;
+      } else {
+        appsNeedingLookup.push(window.application);
+      }
+    }
+
+    // Apply directly resolved icons
+    if (Object.keys(directAppIcons).length > 0) {
+      set((state: SpaceStore) => ({
+        appIcons: { ...state.appIcons, ...directAppIcons },
+      }));
+    }
+
+    // Fetch remaining icons via getApplications() as fallback
+    if (appsNeedingLookup.length > 0) {
+      get().fetchApplicationIcons(appsNeedingLookup);
     }
   },
 
@@ -258,9 +275,33 @@ export const useSpaceStore = create<SpaceStore>((set, get) => ({
 
     set({ allWindows: windows });
 
-    // Fetch app icons for all unique applications
-    const uniqueApps = Array.from(new Set(windows.map((w) => w.application)));
-    get().fetchApplicationIcons(uniqueApps);
+    // First, use appPath from windows directly (more reliable for apps in non-standard locations)
+    const directAppIcons: Record<string, string> = {};
+    const appsNeedingLookup: string[] = [];
+    const seenApps = new Set<string>();
+
+    for (const w of windows) {
+      if (seenApps.has(w.application)) continue;
+      seenApps.add(w.application);
+
+      if (w.appPath) {
+        directAppIcons[w.application] = w.appPath;
+      } else {
+        appsNeedingLookup.push(w.application);
+      }
+    }
+
+    // Apply directly resolved icons
+    if (Object.keys(directAppIcons).length > 0) {
+      set((state: SpaceStore) => ({
+        appIcons: { ...state.appIcons, ...directAppIcons },
+      }));
+    }
+
+    // Fetch remaining icons via getApplications() as fallback
+    if (appsNeedingLookup.length > 0) {
+      get().fetchApplicationIcons(appsNeedingLookup);
+    }
   },
 
   /**
