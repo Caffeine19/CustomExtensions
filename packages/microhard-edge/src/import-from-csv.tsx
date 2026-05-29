@@ -80,13 +80,7 @@ export default function Command() {
           "then pick the .xlsx here."
         }
       />
-      <Form.FilePicker
-        id="csvFile"
-        title="Sync Dump File"
-        allowMultipleSelection={false}
-        canChooseDirectories={false}
-        canChooseFiles
-      />
+      <Form.FilePicker id="csvFile" title="Sync Dump File" />
       {existing ? (
         <Form.Description
           title="Current Cache"
