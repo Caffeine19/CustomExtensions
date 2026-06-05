@@ -14,9 +14,11 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { useSpaceStore } from "./stores/space-store";
 import { DEFAULT_WINDOW_ICON } from "./constants/icon";
-import { group, tryit } from "radash";
+import { group, tryit, unique } from "radash";
 import { moveWindowToSpace } from "./utils/space";
 import { Space, Window as AppWindow } from "./types/space";
+
+const ALL_APPS_VALUE = "__all__";
 
 interface WindowItemProps {
   window: AppWindow;
@@ -181,6 +183,7 @@ export default function Command() {
     focusWindow,
   } = useSpaceStore();
   const [searchText, setSearchText] = useState("");
+  const [selectedApp, setSelectedApp] = useState(ALL_APPS_VALUE);
 
   useEffect(() => {
     fetchAllWindows();
@@ -191,11 +194,15 @@ export default function Command() {
     await focusWindow(windowId);
   };
 
+  const uniqueApps = unique(allWindows.map((w) => w.application)).sort();
+
   const filteredWindows = allWindows
     .filter(
       (window) =>
-        window.title.toLowerCase().includes(searchText.toLowerCase()) ||
-        window.application.toLowerCase().includes(searchText.toLowerCase()),
+        (selectedApp === ALL_APPS_VALUE ||
+          window.application === selectedApp) &&
+        (window.title.toLowerCase().includes(searchText.toLowerCase()) ||
+          window.application.toLowerCase().includes(searchText.toLowerCase())),
     )
     .sort((a, b) => a.application.localeCompare(b.application));
 
@@ -205,6 +212,20 @@ export default function Command() {
       onSearchTextChange={setSearchText}
       searchBarPlaceholder="Search windows by title or application..."
       throttle
+      searchBarAccessory={
+        <List.Dropdown
+          tooltip="Filter by Application"
+          storeValue
+          onChange={setSelectedApp}
+        >
+          <List.Dropdown.Item title="All Apps" value={ALL_APPS_VALUE} />
+          <List.Dropdown.Section title="Applications">
+            {uniqueApps.map((app) => (
+              <List.Dropdown.Item key={app} title={app} value={app} />
+            ))}
+          </List.Dropdown.Section>
+        </List.Dropdown>
+      }
     >
       {filteredWindows.map((window) => (
         <WindowItem
