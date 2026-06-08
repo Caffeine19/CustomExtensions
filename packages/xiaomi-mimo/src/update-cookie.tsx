@@ -22,16 +22,29 @@ function parseCookieFromCurl(input: string): string | null {
     return null;
   }
 
+  // Collapse multi-line curl commands (Chrome DevTools copies with `\` line continuations)
+  const oneline = trimmed.replace(/\\\n/g, " ").replace(/\\\r\n/g, " ");
+
   // Try `-b` or `--cookie` flag first
-  const bMatch = trimmed.match(/(?:^|\s)(?:-b|--cookie)\s+['"](.+?)['"]/);
+  // Use a non-greedy match that terminates at the correct closing quote
+  // (quote followed by space, end of string, or another flag)
+  const bMatch = oneline.match(/(?:^|\s)(?:-b|--cookie)\s+'((?:[^'\\]|\\.)*)'/);
   if (bMatch) {
-    return bMatch[1];
+    return bMatch[1].replace(/\\'/g, "'");
+  }
+
+  // Try double-quoted variant
+  const bMatchDq = oneline.match(
+    /(?:^|\s)(?:-b|--cookie)\s+"((?:[^"\\]|\\.)*)"/,
+  );
+  if (bMatchDq) {
+    return bMatchDq[1].replace(/\\"/g, '"');
   }
 
   // Try `-H 'cookie: ...'` header style
-  const hMatch = trimmed.match(/-H\s+['"]cookie:\s*(.+?)['"]/i);
+  const hMatch = oneline.match(/-H\s+'cookie:\s*((?:[^'\\]|\\.)*)'/i);
   if (hMatch) {
-    return hMatch[1];
+    return hMatch[1].replace(/\\'/g, "'");
   }
 
   return null;
