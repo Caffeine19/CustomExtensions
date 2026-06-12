@@ -1,10 +1,12 @@
-import { Action, ActionPanel, Detail, showToast, Toast } from "@raycast/api";
+import { ActionPanel, Detail, showToast, Toast } from "@raycast/api";
 import { Effect } from "effect";
 import { useEffect, useMemo, useState } from "react";
 
 import { fetchThread, fetchThreadRaw } from "@/service/threadService";
 import { ThreadMessage } from "@/types/thread";
 import { extractName } from "@/utils/format";
+import { OpenInSparkAction } from "./Actions";
+import { SparkEmail } from "@/types/email";
 
 /** Render a single thread message as markdown */
 const renderMessage = (msg: ThreadMessage): string => {
@@ -14,14 +16,14 @@ const renderMessage = (msg: ThreadMessage): string => {
   return parts.join("\n");
 };
 
-export function ThreadView({ emailId }: { emailId: string }) {
+export function ThreadView({ email }: { email: SparkEmail }) {
   const [raw, setRaw] = useState("");
   const [messages, setMessages] = useState<ThreadMessage[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const loadThread = async () => {
-      const program = Effect.all([fetchThreadRaw(emailId), fetchThread(emailId)]).pipe(
+      const program = Effect.all([fetchThreadRaw(email.id), fetchThread(email.id)]).pipe(
         Effect.tap(([rawOutput, parsed]) =>
           Effect.sync(() => {
             setRaw(rawOutput);
@@ -42,7 +44,7 @@ export function ThreadView({ emailId }: { emailId: string }) {
       setIsLoading(false);
     };
     loadThread();
-  }, [emailId]);
+  }, [email.id]);
 
   const markdown = useMemo(() => {
     if (!raw) return "";
@@ -58,7 +60,7 @@ export function ThreadView({ emailId }: { emailId: string }) {
       actions={
         raw ? (
           <ActionPanel>
-            <Action.CopyToClipboard title="Copy Thread" content={raw} />
+            <OpenInSparkAction email={email} />
           </ActionPanel>
         ) : undefined
       }

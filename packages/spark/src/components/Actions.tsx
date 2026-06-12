@@ -74,7 +74,7 @@ const executeSparkAction = async (
 
 /** Push to the thread detail view */
 export function ViewThreadAction({ email }: { email: SparkEmail }) {
-  return <Action.Push title="View Thread" icon={Icon.Envelope} target={<ThreadView emailId={email.id} />} />;
+  return <Action.Push title="View Thread" icon={Icon.Envelope} target={<ThreadView email={email} />} />;
 }
 
 /** Open email in Spark Desktop via deep link */
