@@ -19,7 +19,7 @@ import {
   TogglePinAction,
   ToggleReadAction,
   ViewThreadAction,
-} from "@/components/actions";
+} from "@/components/Actions";
 
 const CACHE_KEY = "spark-emails";
 
