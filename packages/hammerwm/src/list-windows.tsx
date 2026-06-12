@@ -11,11 +11,16 @@ import {
   Toast,
   popToRoot,
 } from "@raycast/api";
-import { useEffect, useRef, useState } from "react";
+import { useCachedPromise } from "@raycast/utils";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSpaceStore } from "./stores/space-store";
 import { DEFAULT_WINDOW_ICON } from "./constants/icon";
 import { group, tryit, unique } from "radash";
-import { moveWindowToSpace } from "./utils/space";
+import {
+  moveWindowToSpace,
+  getAllWindows,
+  focusWindow as focusWindowFn,
+} from "./utils/space";
 import { Space, Window as AppWindow } from "./types/space";
 
 const ALL_APPS_VALUE = "__all__";
@@ -176,22 +181,43 @@ function WindowItem({ window, appIcon, onFocus }: WindowItemProps) {
 
 export default function Command() {
   const {
-    allWindows,
-    isLoadingAllWindows,
-    appIcons,
-    fetchAllWindows,
-    focusWindow,
-  } = useSpaceStore();
+    data: allWindows = [],
+    isLoading,
+    error,
+  } = useCachedPromise(
+    async (): Promise<AppWindow[]> => {
+      return getAllWindows();
+    },
+    [],
+    {
+      keepPreviousData: true,
+    },
+  );
+
+  const appIcons = useMemo(() => {
+    const icons: Record<string, string> = {};
+    for (const window of allWindows) {
+      if (!icons[window.application] && window.appPath) {
+        icons[window.application] = window.appPath;
+      }
+    }
+    return icons;
+  }, [allWindows]);
+
   const [searchText, setSearchText] = useState("");
   const [selectedApp, setSelectedApp] = useState(ALL_APPS_VALUE);
 
-  useEffect(() => {
-    fetchAllWindows();
-  }, []);
+  if (error) {
+    showToast({
+      style: Toast.Style.Failure,
+      title: "Failed to load windows",
+      message: String(error),
+    });
+  }
 
   const handleFocus = async (windowId: string) => {
     await closeMainWindow();
-    await focusWindow(windowId);
+    await focusWindowFn(windowId);
   };
 
   const uniqueApps = unique(allWindows.map((w) => w.application)).sort();
@@ -208,7 +234,7 @@ export default function Command() {
 
   return (
     <List
-      isLoading={isLoadingAllWindows}
+      isLoading={isLoading}
       onSearchTextChange={setSearchText}
       searchBarPlaceholder="Search windows by title or application..."
       throttle
