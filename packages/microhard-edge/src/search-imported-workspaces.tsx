@@ -1,23 +1,11 @@
 import { Action, ActionPanel, Color, Icon, List, showToast, Toast } from "@raycast/api";
 import { useCachedState } from "@raycast/utils";
 import { useEffect, useMemo } from "react";
-import tinycolor from "tinycolor2";
 
 import { SyncImport, SyncTab, SyncWorkspace } from "./types/sync-workspace";
+import { hexMap } from "./types/workspace-color";
 import { launchWorkspaceByGuid } from "./utils/launch-workspace";
 import { clearSyncImport, loadSyncImport } from "./utils/sync-cache";
-
-/** ARGB int → "#rrggbb" hex string */
-function argbToHex(argb: number): string {
-  return `#${(argb & 0xffffff).toString(16).padStart(6, "0")}`;
-}
-
-/** ARGB int → Raycast Color.Dynamic (light: original, dark: brightened) */
-function argbToDynamicColor(argb: number): Color.Dynamic {
-  const light = argbToHex(argb);
-  const dark = tinycolor(light).lighten(80).toHexString();
-  return { light, dark, adjustContrast: false };
-}
 
 const groupTabs = (tabs: SyncTab[]): Map<string, SyncTab[]> => {
   const map = new Map<string, SyncTab[]>();
@@ -66,10 +54,12 @@ export default function Command() {
         return (
           <List.Item
             key={workspace.guid}
-            icon={{ source: Icon.Map, tintColor: argbToDynamicColor(workspace.color) }}
+            icon={{ source: Icon.Map, tintColor: hexMap[workspace.color] }}
             title={workspace.title}
-            subtitle={`${workspace.creationSource}`}
-            accessories={[{ tag: { value: `${tabs.length} Tabs`, color: Color.SecondaryText } }]}
+            subtitle={`${tabs.length} tab${tabs.length === 1 ? "" : "s"}${
+              workspace.creationSource ? ` • ${workspace.creationSource}` : ""
+            }`}
+            accessories={[{ tag: { value: `${tabs.length}`, color: Color.SecondaryText } }]}
             actions={
               <ActionPanel>
                 <Action
