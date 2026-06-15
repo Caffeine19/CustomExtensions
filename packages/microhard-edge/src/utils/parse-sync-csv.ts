@@ -15,6 +15,7 @@ interface SyncEntity {
     workspace?: {
       title?: string;
       color?: string | number;
+      emoji?: string;
       creation_source?: string;
       is_copilot_project_enabled?: boolean;
       visit_time_windows_epoch_micros?: string;
@@ -137,6 +138,7 @@ export const parseSyncCsv = (filePath: string): ParseResult => {
         guid,
         title: ew.workspace.title ?? "(untitled)",
         color: toWorkspaceColor(ew.workspace.color),
+        emoji: ew.workspace.emoji,
         creationSource: ew.workspace.creation_source,
         isCopilotProjectEnabled: ew.workspace.is_copilot_project_enabled,
         creationTime: ew.creation_time_windows_epoch_micros,

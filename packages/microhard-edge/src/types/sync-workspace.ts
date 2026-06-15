@@ -4,6 +4,7 @@ export interface SyncWorkspace {
   guid: string;
   title: string;
   color: WorkspaceColor;
+  emoji?: string;
   creationSource?: string;
   isCopilotProjectEnabled?: boolean;
   creationTime?: string;

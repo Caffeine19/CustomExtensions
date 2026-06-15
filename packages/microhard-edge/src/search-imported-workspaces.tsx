@@ -2,10 +2,14 @@ import { Action, ActionPanel, Color, Icon, List, showToast, Toast } from "@rayca
 import { useCachedState } from "@raycast/utils";
 import { useEffect, useMemo } from "react";
 
-import { SyncImport, SyncTab, SyncWorkspace } from "./types/sync-workspace";
-import { hexMap } from "./types/workspace-color";
+import { SyncImport, SyncTab } from "./types/sync-workspace";
 import { launchWorkspaceByGuid } from "./utils/launch-workspace";
 import { clearSyncImport, loadSyncImport } from "./utils/sync-cache";
+
+/** ARGB int → "#rrggbb" hex string */
+function argbToHex(argb: number): string {
+  return `#${(argb & 0xffffff).toString(16).padStart(6, "0")}`;
+}
 
 const groupTabs = (tabs: SyncTab[]): Map<string, SyncTab[]> => {
   const map = new Map<string, SyncTab[]>();
@@ -25,6 +29,16 @@ export default function Command() {
   }, [setData]);
 
   const tabsByWorkspace = useMemo(() => groupTabs(data?.tabs ?? []), [data?.tabs]);
+
+  type SortBy = "default" | "name";
+
+  const [sortBy, setSortBy] = useCachedState<SortBy>("sync-import-sort", "default");
+
+  const sortedWorkspaces = useMemo(() => {
+    const list = [...(data?.workspaces ?? [])];
+    if (sortBy === "name") list.sort((a, b) => a.title.localeCompare(b.title));
+    return list;
+  }, [data?.workspaces, sortBy]);
 
   if (!data) {
     return (
@@ -48,29 +62,34 @@ export default function Command() {
     <List
       searchBarPlaceholder="Search workspaces…"
       navigationTitle={`Imported ${new Date(data.importedAt).toLocaleString()}`}
+      searchBarAccessory={
+        <List.Dropdown tooltip="Sort Order" storeValue onChange={(v) => setSortBy(v as SortBy)}>
+          <List.Dropdown.Item title="Sort by Recent Opened" value="default" />
+          <List.Dropdown.Item title="Sort by Name" value="name" />
+        </List.Dropdown>
+      }
     >
-      {data.workspaces.map((workspace) => {
+      {sortedWorkspaces.map((workspace) => {
         const tabs = tabsByWorkspace.get(workspace.guid) ?? [];
         return (
           <List.Item
             key={workspace.guid}
-            icon={{ source: Icon.Map, tintColor: hexMap[workspace.color] }}
-            title={workspace.title}
-            subtitle={`${tabs.length} tab${tabs.length === 1 ? "" : "s"}${
-              workspace.creationSource ? ` • ${workspace.creationSource}` : ""
-            }`}
-            accessories={[{ tag: { value: `${tabs.length}`, color: Color.SecondaryText } }]}
+            icon={workspace.emoji ? undefined : { source: Icon.Map, tintColor: argbToHex(workspace.color) }}
+            title={workspace.emoji ? ` ${workspace.emoji}   ${workspace.title}` : workspace.title}
+            accessories={[
+              {
+                tag: { value: workspace.creationSource, color: Color.SecondaryText },
+              },
+              {
+                tag: { value: `${tabs.length} Tabs`, color: Color.SecondaryText },
+              },
+            ]}
             actions={
               <ActionPanel>
                 <Action
                   icon={Icon.Compass}
                   title="Launch Workspace"
                   onAction={() => launchWorkspaceByGuid(workspace.guid)}
-                />
-                <Action.Push
-                  title="View Tabs"
-                  icon={Icon.List}
-                  target={<WorkspaceTabs workspace={workspace} tabs={tabs} />}
                 />
                 <Action.CopyToClipboard title="Copy Workspace GUID" content={workspace.guid} />
                 <Action
@@ -85,36 +104,6 @@ export default function Command() {
           />
         );
       })}
-    </List>
-  );
-}
-
-function WorkspaceTabs({ workspace, tabs }: { workspace: SyncWorkspace; tabs: SyncTab[] }) {
-  return (
-    <List navigationTitle={workspace.title} searchBarPlaceholder={`Search tabs in ${workspace.title}…`}>
-      {tabs.length === 0 ? (
-        <List.EmptyView icon={Icon.Tray} title="No tabs" />
-      ) : (
-        tabs.map((tab) => (
-          <List.Item
-            key={tab.guid}
-            icon={tab.faviconUrl ? { source: tab.faviconUrl, fallback: Icon.Globe } : Icon.Globe}
-            title={tab.title}
-            subtitle={tab.url}
-            actions={
-              <ActionPanel>
-                {tab.url ? <Action.OpenInBrowser url={tab.url} /> : null}
-                {tab.url ? <Action.CopyToClipboard title="Copy URL" content={tab.url} /> : null}
-                <Action
-                  icon={Icon.Compass}
-                  title="Launch Parent Workspace"
-                  onAction={() => launchWorkspaceByGuid(workspace.guid)}
-                />
-              </ActionPanel>
-            }
-          />
-        ))
-      )}
     </List>
   );
 }
