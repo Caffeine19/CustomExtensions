@@ -31,6 +31,14 @@
       "subtitle": "GitHub Copilot",
       "description": "Start a quick GitHub Copilot chat session from Raycast.",
       "mode": "view"
+    },
+    {
+      "name": "active-sessions-menubar",
+      "title": "Active Sessions in Menu Bar",
+      "subtitle": "VS Code Copilot",
+      "description": "Show active VS Code Copilot chat sessions in the macOS menu bar.",
+      "mode": "menu-bar",
+      "interval": "15s"
     }
   ],
   "preferences": [
