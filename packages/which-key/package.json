@@ -3,7 +3,7 @@
   "name": "which-key",
   "title": "Which Key",
   "description": "Browse and search the current application's menu bar items with keyboard shortcuts",
-  "icon": "extension-icon.png",
+  "icon": "extension-icon-v3.png",
   "author": "CaffeineCat",
   "platforms": [
     "macOS",
