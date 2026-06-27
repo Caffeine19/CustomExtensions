@@ -20,7 +20,7 @@ const STATUS_CONFIG: Record<ChatStatus, { label: string; icon: Icon; color: Colo
   archived: { label: "Archived", icon: Icon.Tray, color: Color.Blue },
 };
 
-const ACTIVE_STATUSES: ChatStatus[] = ["in-progress", "needs-input"];
+const ACTIVE_STATUSES: ChatStatus[] = ["in-progress", "needs-input", "failed"];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -37,20 +37,36 @@ function groupByWorkspace(sessions: ResolvedChatSession[]): Map<string, Resolved
   return groups;
 }
 
-function menubarTitle(activeSessions: ResolvedChatSession[]): string {
-  if (activeSessions.length === 0) return "No Active";
-  if (activeSessions.length === 1) return `1 Active`;
-  return `${activeSessions.length} Active`;
+function menubarTitle(activeSessions: ResolvedChatSession[], pendingCount: number, errorCount: number): string {
+  const activeCount = activeSessions.filter((s) => s.chatStatus === "in-progress").length;
+  if (activeCount === 0 && pendingCount === 0 && errorCount === 0) return "None";
+
+  const counts = {
+    active: activeCount,
+    pending: pendingCount,
+    error: errorCount,
+  };
+
+  const parts: string[] = [];
+  if (counts.active > 0) parts.push(`${counts.active} Active`);
+  if (counts.pending > 0) parts.push(`${counts.pending} Pending`);
+  if (counts.error > 0) parts.push(`${counts.error} Error`);
+
+  return parts.join(" / ");
 }
 
 function SessionItem({ session }: { session: ResolvedChatSession }) {
   const statusCfg = STATUS_CONFIG[session.chatStatus];
+  const showPending = session.hasPendingEdits && !isActive(session);
   return (
     <MenuBarExtra.Item
-      icon={{ source: statusCfg.icon, tintColor: statusCfg.color }}
+      icon={{
+        source: showPending ? Icon.Pencil : statusCfg.icon,
+        tintColor: showPending ? Color.Orange : statusCfg.color,
+      }}
       title={truncate(session.title, 40)}
       subtitle={dayjs(session.lastMessageDate).fromNow()}
-      tooltip={`${statusCfg.label} · ${dayjs(session.lastMessageDate).fromNow()}`}
+      tooltip={`${showPending ? "Pending Edits · " : ""}${statusCfg.label} · ${dayjs(session.lastMessageDate).fromNow()}`}
       onAction={async () => {
         await closeMainWindow();
         const result = await Effect.runPromise(Effect.either(openSessionViaUriHandler(session)));
@@ -73,6 +89,8 @@ export default function Command() {
 
   const nonEmpty = sessions?.filter((s) => s.chatStatus !== "empty") ?? [];
   const activeSessions = nonEmpty.filter(isActive);
+  const pendingCount = activeSessions.filter((s) => s.hasPendingEdits).length;
+  const errorSessions = activeSessions.filter((s) => s.chatStatus === "failed");
   const recentSessions = nonEmpty
     .sort((a, b) => b.lastMessageDate.getTime() - a.lastMessageDate.getTime())
     .slice(0, 20);
@@ -82,14 +100,25 @@ export default function Command() {
   return (
     <MenuBarExtra
       icon="github-copilot-dark.svg"
-      title={menubarTitle(activeSessions)}
+      title={menubarTitle(activeSessions, pendingCount, errorSessions.length)}
       tooltip="VS Code Copilot Sessions"
       isLoading={isLoading}
     >
-      {/* Active sessions at the top */}
-      {activeSessions.length > 0 && (
-        <MenuBarExtra.Section title={`Active (${activeSessions.length})`}>
-          {activeSessions.map((session) => (
+      {/* Active sessions */}
+      {activeSessions.filter((s) => s.chatStatus === "in-progress").length > 0 && (
+        <MenuBarExtra.Section title={`Active (${activeSessions.filter((s) => s.chatStatus === "in-progress").length})`}>
+          {activeSessions
+            .filter((s) => s.chatStatus === "in-progress")
+            .map((session) => (
+              <SessionItem key={session.sessionId} session={session} />
+            ))}
+        </MenuBarExtra.Section>
+      )}
+
+      {/* Error sessions */}
+      {errorSessions.length > 0 && (
+        <MenuBarExtra.Section title={`Error (${errorSessions.length})`}>
+          {errorSessions.map((session) => (
             <SessionItem key={session.sessionId} session={session} />
           ))}
         </MenuBarExtra.Section>

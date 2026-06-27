@@ -22,10 +22,10 @@
       "mode": "no-view"
     },
     {
-      "name": "list-spaces",
-      "title": "List Spaces",
+      "name": "switch-spaces",
+      "title": "Switch Spaces",
       "subtitle": "HammerWM",
-      "description": "List all spaces from all screen.=",
+      "description": "Switch between spaces from all screens",
       "mode": "view"
     },
     {
@@ -36,10 +36,10 @@
       "mode": "no-view"
     },
     {
-      "name": "list-windows",
-      "title": "List Windows",
+      "name": "switch-windows",
+      "title": "Switch Windows",
       "subtitle": "HammerWM",
-      "description": "List windows from all spaces",
+      "description": "Switch between windows from all spaces",
       "mode": "view"
     }
   ],
