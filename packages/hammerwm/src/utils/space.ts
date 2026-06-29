@@ -26,7 +26,11 @@ export function removeSpaceById(spaceId: Space["id"]) {
 
 export async function removeCurrentSpace() {
   const code = /* lua */ `
-    local currentScreen = hs.screen.mainScreen()
+    local currentScreen = hs.mouse.getCurrentScreen()
+    if not currentScreen then
+        currentScreen = hs.screen.mainScreen()
+        print("Mouse screen not found, falling back to main screen")
+    end
     local currentActiveSpaceOnCurrentScreen = hs.spaces.activeSpaceOnScreen(currentScreen)
     local spacesInCurrentScreen = hs.spaces.spacesForScreen(currentScreen)
     print(hs.inspect(spacesInCurrentScreen), currentActiveSpaceOnCurrentScreen)
@@ -78,7 +82,11 @@ export function gotoSpace(spaceId: Space["id"]) {
 
 export async function createSpace() {
   const code = /* lua */ `
-    local currentScreen = hs.screen.mainScreen()
+    local currentScreen = hs.mouse.getCurrentScreen()
+    if not currentScreen then
+        currentScreen = hs.screen.mainScreen()
+        print("Mouse screen not found, falling back to main screen")
+    end
     hs.spaces.addSpaceToScreen(currentScreen, false)
 
     -- Get all spaces on the current screen to find our position
