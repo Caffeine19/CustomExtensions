@@ -88,26 +88,30 @@ export default function Command() {
   const { data: sessions, isLoading, revalidate } = useCachedPromise(loadAllSessions, []);
 
   const nonEmpty = sessions?.filter((s) => s.chatStatus !== "empty") ?? [];
-  const activeSessions = nonEmpty.filter(isActive);
-  const pendingCount = activeSessions.filter((s) => s.hasPendingEdits).length;
-  const errorSessions = activeSessions.filter((s) => s.chatStatus === "failed");
   const recentSessions = nonEmpty
     .sort((a, b) => b.lastMessageDate.getTime() - a.lastMessageDate.getTime())
     .slice(0, 20);
 
   const grouped = groupByWorkspace(recentSessions);
 
+  // Use recentSessions as the base for Active section to keep time dimension consistent
+  const activeRecentSessions = recentSessions.filter(isActive);
+  const pendingCount = recentSessions.filter((s) => s.hasPendingEdits).length;
+  const errorSessions = activeRecentSessions.filter((s) => s.chatStatus === "failed");
+
   return (
     <MenuBarExtra
       icon="github-copilot-dark.svg"
-      title={menubarTitle(activeSessions, pendingCount, errorSessions.length)}
+      title={menubarTitle(activeRecentSessions, pendingCount, errorSessions.length)}
       tooltip="VS Code Copilot Sessions"
       isLoading={isLoading}
     >
       {/* Active sessions */}
-      {activeSessions.filter((s) => s.chatStatus === "in-progress").length > 0 && (
-        <MenuBarExtra.Section title={`Active (${activeSessions.filter((s) => s.chatStatus === "in-progress").length})`}>
-          {activeSessions
+      {activeRecentSessions.filter((s) => s.chatStatus === "in-progress").length > 0 && (
+        <MenuBarExtra.Section
+          title={`Active (${activeRecentSessions.filter((s) => s.chatStatus === "in-progress").length})`}
+        >
+          {activeRecentSessions
             .filter((s) => s.chatStatus === "in-progress")
             .map((session) => (
               <SessionItem key={session.sessionId} session={session} />
