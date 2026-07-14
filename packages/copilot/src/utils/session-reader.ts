@@ -443,26 +443,39 @@ export function renameSession(session: ResolvedChatSession, newTitle: string): E
 // ── Open session ─────────────────────────────────────────────────────────────
 
 /**
- * Open a chat session via the companion VS Code extension.
+ * Build a VS Code deep link URL for a chat session.
  *
- * Sends the request directly to the extension URI handler. The companion
- * extension decides whether to activate an existing editor tab or open the
- * session in the chat sidebar.
+ * Uses the built-in `vscode://…?session=<uri>` protocol introduced in
+ * VS Code 1.128+. The session URI follows the `vscode-chat-session://`
+ * scheme and does not require a companion extension.
+ *
+ * Matches VS Code's own "Open in VS Code" action (OpenInVSCodeAction in
+ * sessions/browser/actions/vscodeActions.ts).
+ *
+ * @see https://code.visualstudio.com/updates/v1_128#_deep-links-to-a-specific-chat
+ */
+export function buildSessionDeepLink(session: ResolvedChatSession): string {
+  const scheme = getScheme();
+  const encodedId = Buffer.from(session.sessionId, "utf-8").toString("base64url");
+  const sessionUri = `vscode-chat-session://local/${encodedId}`;
+  const params = new URLSearchParams();
+  params.set("windowId", "_blank");
+  params.set("session", sessionUri);
+  return `${scheme}://file${encodeURI(session.workspacePath)}?${params.toString()}`;
+}
+
+/**
+ * Open a chat session via the native VS Code deep link.
  */
 export const openSessionViaUriHandler = (session: ResolvedChatSession): Effect.Effect<void, VSCodeLaunchError> =>
   Effect.try({
     try: () => {
-      const scheme = getScheme();
-      const encodedId = Buffer.from(session.sessionId, "utf-8").toString("base64url");
-      const encodedWorkspace = encodeURIComponent(session.workspacePath);
-      const encodedTitle = encodeURIComponent(session.title);
-      const url = `${scheme}://CaffeineCat.open-chat-session/open?session=${encodedId}&workspace=${encodedWorkspace}&title=${encodedTitle}`;
-      const child = spawn("open", [url], { detached: true, stdio: "ignore" });
+      const child = spawn("open", [buildSessionDeepLink(session)], { detached: true, stdio: "ignore" });
       child.unref();
     },
     catch: (cause) =>
       new VSCodeLaunchError({
-        message: "Could not open chat session via the VS Code URI handler.",
+        message: "Could not open chat session via the VS Code deep link.",
         cause,
       }),
   });

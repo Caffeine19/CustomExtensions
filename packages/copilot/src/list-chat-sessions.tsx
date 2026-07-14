@@ -24,6 +24,7 @@ import {
   openWorkspaceInVSCode,
   openSessionFile,
   renameSession,
+  buildSessionDeepLink,
 } from "./utils/session-reader";
 import { ChatStatus, ResolvedChatSession } from "./types/session";
 
@@ -297,6 +298,18 @@ function SessionListItem({
             <RenameSessionAction session={session} onRename={onRename} />
           </ActionPanel.Section>
           <ActionPanel.Section title="Info">
+            <Action.CopyToClipboard
+              title="Copy as Deep Link"
+              icon={Icon.Link}
+              shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
+              content={buildSessionDeepLink(session)}
+            />
+            <Action.CopyToClipboard
+              title="Copy as Markdown Link"
+              icon={Icon.Link}
+              shortcut={{ modifiers: ["cmd", "opt"], key: "c" }}
+              content={`[${session.title}](${buildSessionDeepLink(session)})`}
+            />
             <Action.CopyToClipboard title="Copy Session ID" icon={Icon.Clipboard} content={session.sessionId} />
             <Action.CopyToClipboard title="Copy Workspace Path" icon={Icon.Folder} content={session.workspacePath} />
             <Action.CopyToClipboard title="Copy Session Title" icon={Icon.Text} content={session.title} />
