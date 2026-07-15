@@ -18,6 +18,7 @@ import {
 import { useCachedPromise } from "@raycast/utils";
 import { useEffect, useMemo, useState } from "react";
 import fs from "fs";
+import { sleep } from "radash";
 import { fetchAllMenus, clickMenuItem } from "./utils/menuItems";
 import { matchesQuery } from "./utils/search";
 import { getKeyBindings, matchKeyBinding, formatKeySequence } from "./utils/keybindings";
@@ -132,8 +133,9 @@ export default function Command() {
   const handleRun = async (breadcrumb: string) => {
     if (!appInfo) return;
     try {
-      await clickMenuItem(appInfo.name, breadcrumb);
       await closeMainWindow({ clearRootSearch: true });
+      await sleep(150);
+      await clickMenuItem(appInfo.name, breadcrumb);
       await popToRoot();
     } catch (e) {
       await showToast({ style: Toast.Style.Failure, title: "Failed to run menu item", message: String(e) });

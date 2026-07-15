@@ -1,18 +1,23 @@
 #!/usr/bin/env swift
 
-// Click a menu item by its breadcrumb path using AXUIElement API.
-// This is the same approach Hammerspoon uses (see hs.application:selectMenuItem).
+// Click a menu item by its breadcrumb path using AppleScript / System Events.
 //
-// Usage: click-menu-item.swift <AppName> <segment1> <segment2> ...
-// Example: click-menu-item.swift "Safari" "File" "Save"
+// System Events' `click` command handles full menu navigation including
+// opening submenus, which is more reliable than AXUIElement for Electron
+// apps (where the AX hierarchy is lazily populated and AXPress is ignored
+// when the app isn't frontmost).
+//
+// Usage: click-menu-item.swift <AppName> <MenuBarItem> [submenu...] <MenuItem>
+// Example: click-menu-item.swift "Code - Insiders" "Code - Insiders" "Preferences" "Settings"
 //
 // Exits with code 0 on success, 1 on error (message to stderr).
 
 import Cocoa
 
-// Validate arguments
+// ─── Parse arguments ───
+
 guard CommandLine.arguments.count >= 3 else {
-    fputs("Usage: click-menu-item.swift <AppName> <segment1> [segment2] ...\n", stderr)
+    fputs("Usage: click-menu-item.swift <AppName> <MenuBarItem> [submenu...] <MenuItem>\n", stderr)
     exit(1)
 }
 
@@ -27,7 +32,8 @@ guard !pathSegments.isEmpty else {
 // Normalize: strip ".app" suffix for matching
 let normalizedName = appName.hasSuffix(".app") ? String(appName.dropLast(4)) : appName
 
-// Resolve PID from app name
+// ─── Resolve PID from app name ───
+
 guard let app = NSWorkspace.shared.runningApplications.first(where: {
     $0.activationPolicy == .regular && ($0.localizedName == normalizedName || $0.bundleIdentifier == appName)
 }) else {
@@ -35,114 +41,49 @@ guard let app = NSWorkspace.shared.runningApplications.first(where: {
     exit(1)
 }
 let pid = app.processIdentifier
+fputs("LOG:App resolved: \"\(appName)\" → pid=\(pid)\n", stderr)
+fputs("LOG:Path segments: \(pathSegments)\n", stderr)
 
-// ─── Helper functions ───
+// ─── Build AppleScript menu item reference ───
+// Path: ["Code - Insiders", "Preferences", "Settings"] →
+//   menu item "Settings" of menu "Preferences" of menu item "Preferences"
+//     of menu "Code - Insiders" of menu bar item "Code - Insiders" of menu bar 1
+// Path: ["File", "Save"] →
+//   menu item "Save" of menu "File" of menu bar item "File" of menu bar 1
 
-func getChildren(_ element: AXUIElement) -> [AXUIElement] {
-    var children: CFTypeRef?
-    guard AXUIElementCopyAttributeValue(element, kAXChildrenAttribute as CFString, &children) == .success,
-          let items = children as? [AXUIElement] else { return [] }
-    return items
+let last = pathSegments[pathSegments.count - 1]
+var ref = "menu item \"\(last)\""
+
+for i in stride(from: pathSegments.count - 2, through: 1, by: -1) {
+    ref += " of menu \"\(pathSegments[i])\" of menu item \"\(pathSegments[i])\""
 }
+ref += " of menu \"\(pathSegments[0])\" of menu bar item \"\(pathSegments[0])\" of menu bar 1"
 
-func getRole(_ element: AXUIElement) -> String {
-    var role: CFTypeRef?
-    AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &role)
-    return role as? String ?? ""
-}
+// ─── Execute: activate app + click menu item ───
 
-func getTitle(_ element: AXUIElement) -> String {
-    var title: CFTypeRef?
-    AXUIElementCopyAttributeValue(element, kAXTitleAttribute as CFString, &title)
-    return title as? String ?? ""
-}
+let script = """
+tell application "System Events"
+    set theProcess to first process whose unix id is \(pid)
+    set frontmost of theProcess to true
+    tell theProcess
+        click \(ref)
+    end tell
+end tell
+"""
 
-// Create AX element for the application
-let axApp = AXUIElementCreateApplication(pid)
+fputs("LOG:Executing AppleScript click\n", stderr)
 
-// Get the menu bar
-var menuBarRef: CFTypeRef?
-guard AXUIElementCopyAttributeValue(axApp, kAXMenuBarAttribute as CFString, &menuBarRef) == .success,
-      let menuBar = menuBarRef else {
-    fputs("ERROR:Cannot access menu bar\n", stderr)
-    exit(1)
-}
-
-// Navigate the menu hierarchy
-// Path: ["File", "Open Recent", "Clear Menu"] →
-//   menu bar item "File" → menu "File" → menu item "Open Recent" → menu "Open Recent" → menu item "Clear Menu"
-var currentElement = menuBar as! AXUIElement
-
-for (idx, segment) in pathSegments.enumerated() {
-    let isLast = idx == pathSegments.count - 1
-
-    // Get children of current element
-    let children = getChildren(currentElement)
-    var found: AXUIElement?
-    var fallbackFound: AXUIElement?
-
-    for child in children {
-        let role = getRole(child)
-        let title = getTitle(child)
-
-        // Match by title
-        if title == segment {
-            // Prefer exact role match: menu bar items for first segment, menu items for rest
-            if idx == 0 && role == (kAXMenuBarItemRole as String) {
-                found = child
-                break
-            } else if idx > 0 && role == (kAXMenuItemRole as String) {
-                found = child
-                break
-            }
-            // Fallback: accept any matching title
-            if fallbackFound == nil {
-                fallbackFound = child
-            }
-        }
-    }
-
-    // If we didn't find an exact role match, use the fallback
-    if found == nil {
-        found = fallbackFound
-    }
-
-    guard let matched = found else {
-        fputs("ERROR:Menu item not found: \"\(segment)\"\n", stderr)
+var error: NSDictionary?
+if let appleScript = NSAppleScript(source: script) {
+    appleScript.executeAndReturnError(&error)
+    if let error = error {
+        fputs("LOG:AppleScript ref: \(ref)\n", stderr)
+        fputs("ERROR:\(error[NSAppleScript.errorMessage] ?? "unknown error")\n", stderr)
         exit(1)
     }
-
-    if isLast {
-        // This is the target menu item — click it
-        let result = AXUIElementPerformAction(matched, kAXPressAction as CFString)
-        if result == .success {
-            exit(0)
-        } else {
-            fputs("ERROR:Failed to press menu item \"\(segment)\" (AXError: \(result.rawValue))\n", stderr)
-            exit(1)
-        }
-    } else {
-        // Intermediate item — navigate into its submenu
-        // A menu item's submenu is its child with role AXMenu
-        let itemChildren = getChildren(matched)
-        var submenu: AXUIElement?
-
-        for child in itemChildren {
-            if getRole(child) == (kAXMenuRole as String) {
-                submenu = child
-                break
-            }
-        }
-
-        guard let sub = submenu else {
-            fputs("ERROR:No submenu found for \"\(segment)\"\n", stderr)
-            exit(1)
-        }
-
-        currentElement = sub
-    }
+    fputs("LOG:AppleScript succeeded\n", stderr)
+    exit(0)
 }
 
-// Should not reach here
-fputs("ERROR:Unexpected end of path\n", stderr)
+fputs("ERROR:Failed to create AppleScript\n", stderr)
 exit(1)

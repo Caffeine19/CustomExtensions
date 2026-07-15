@@ -19,7 +19,7 @@ func glyphName(_ glyph: Int) -> String? {
     switch glyph {
     case 23: return "\u{232B}" // ⌫ Delete
     case 24: return "\u{21E5}" // ⇥ Tab
-    case 25: return "\u{2324}" // ⌤ Enter
+    case 25: return "\u{21A9}" // ↩ Return
     case 27: return "\u{238B}" // ⎋ Escape
     case 28: return "\u{2326}" // ⌦ Forward Delete
     case 29: return "\u{2196}" // ↖ Home
@@ -47,7 +47,7 @@ func vkeyName(_ vkey: Int) -> String? {
     case 121: return "\u{21DF}" // ⇟ Page Down
     case 51:  return "\u{232B}" // ⌫ Delete
     case 117: return "\u{2326}" // ⌦ Forward Delete
-    case 36:  return "\u{2324}" // ⌤ Return
+    case 36:  return "\u{21A9}" // ↩ Return
     case 48:  return "\u{21E5}" // ⇥ Tab
     case 53:  return "\u{238B}" // ⎋ Escape
     case 122: return "F1"

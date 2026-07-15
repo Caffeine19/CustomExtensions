@@ -19,7 +19,6 @@ export interface FlatMenuItem {
  * which is far more reliable than AppleScript/System Events process name matching.
  */
 export async function clickMenuItem(appName: string, breadcrumb: string): Promise<void> {
-  // Split breadcrumb: "File → Save" → ["File", "Save"]
   const segments = breadcrumb.split(" → ");
   if (segments.length < 2) throw new Error("Invalid menu path");
 
@@ -27,6 +26,9 @@ export async function clickMenuItem(appName: string, breadcrumb: string): Promis
 
   await new Promise<void>((resolve, reject) => {
     execFile("swift", [scriptPath, appName, ...segments], { timeout: 10000 }, (err, _stdout, stderr) => {
+      if (stderr?.trim()) {
+        console.error("[click-menu-item]", stderr.trim());
+      }
       if (err) {
         // Extract the meaningful error from stderr
         const msg = stderr?.trim() || err.message;
