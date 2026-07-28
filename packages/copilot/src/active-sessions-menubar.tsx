@@ -55,7 +55,7 @@ function menubarTitle(activeSessions: ResolvedChatSession[], pendingCount: numbe
   return parts.join(" / ");
 }
 
-function SessionItem({ session }: { session: ResolvedChatSession }) {
+function SessionItem({ session, showWorkspace = false }: { session: ResolvedChatSession; showWorkspace?: boolean }) {
   const statusCfg = STATUS_CONFIG[session.chatStatus];
   const showPending = session.hasPendingEdits && !isActive(session);
   return (
@@ -65,7 +65,7 @@ function SessionItem({ session }: { session: ResolvedChatSession }) {
         tintColor: showPending ? Color.Orange : statusCfg.color,
       }}
       title={truncate(session.title, 40)}
-      subtitle={dayjs(session.lastMessageDate).fromNow()}
+      subtitle={showWorkspace ? session.workspaceName : dayjs(session.lastMessageDate).fromNow()}
       tooltip={`${showPending ? "Pending Edits · " : ""}${statusCfg.label} · ${dayjs(session.lastMessageDate).fromNow()}`}
       onAction={async () => {
         await closeMainWindow();
@@ -96,7 +96,7 @@ export default function Command() {
 
   // Use recentSessions as the base for Active section to keep time dimension consistent
   const activeRecentSessions = recentSessions.filter(isActive);
-  const pendingCount = recentSessions.filter((s) => s.hasPendingEdits).length;
+  const pendingCount = recentSessions.filter((s) => s.hasPendingEdits && !isActive(s)).length;
   const errorSessions = activeRecentSessions.filter((s) => s.chatStatus === "failed");
 
   return (
@@ -114,7 +114,7 @@ export default function Command() {
           {activeRecentSessions
             .filter((s) => s.chatStatus === "in-progress")
             .map((session) => (
-              <SessionItem key={session.sessionId} session={session} />
+              <SessionItem key={session.sessionId} session={session} showWorkspace />
             ))}
         </MenuBarExtra.Section>
       )}
@@ -123,7 +123,7 @@ export default function Command() {
       {errorSessions.length > 0 && (
         <MenuBarExtra.Section title={`Error (${errorSessions.length})`}>
           {errorSessions.map((session) => (
-            <SessionItem key={session.sessionId} session={session} />
+            <SessionItem key={session.sessionId} session={session} showWorkspace />
           ))}
         </MenuBarExtra.Section>
       )}
