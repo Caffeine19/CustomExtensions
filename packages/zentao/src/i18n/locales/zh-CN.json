@@ -42,6 +42,7 @@
     "viewBugDetails": "查看Bug详情",
     "openInZentao": "在禅道中打开",
     "copyBugId": "复制BugID",
+    "copyBugTitle": "复制Bug标题",
     "copyBugUrl": "复制Bug URL",
     "pinBug": "置顶Bug",
     "unpinBug": "取消置顶",

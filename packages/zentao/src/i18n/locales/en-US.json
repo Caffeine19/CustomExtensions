@@ -42,6 +42,7 @@
     "viewBugDetails": "View Bug Details",
     "openInZentao": "Open in Zentao",
     "copyBugId": "Copy Bug ID",
+    "copyBugTitle": "Copy Bug Title",
     "copyBugUrl": "Copy Bug URL",
     "pinBug": "Pin Bug",
     "unpinBug": "Unpin Bug",

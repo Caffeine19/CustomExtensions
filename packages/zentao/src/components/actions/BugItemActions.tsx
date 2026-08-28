@@ -53,9 +53,9 @@ export function BugItemActions({
       />
 
       <Action.CopyToClipboard
-        title={t("bugActions.copyBugId")}
-        content={bug.id}
-        icon={Icon.Clipboard}
+        title={t("bugActions.copyBugTitle")}
+        content={`#${bug.id} ${bug.title}`}
+        icon={Icon.Text}
         shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
       />
 
