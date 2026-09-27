@@ -1,20 +1,15 @@
 import { Alert, confirmAlert, Icon, showHUD } from "@raycast/api";
 
 import { execSync } from "child_process";
-
-const DEBUG_ARGS = ["--remote-debugging-port=9333", "--remote-allow-origins=*"];
-
-function isArcRunning(): boolean {
-  try {
-    execSync("pgrep -x Arc", { stdio: "pipe" });
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { isArcRunning, isRemoteDebuggingActive, launchArcWithRemoteDebugging } from "./launch-arc";
 
 export default async function main() {
   if (isArcRunning()) {
+    if (isRemoteDebuggingActive()) {
+      await showHUD("Arc is already running with remote debugging");
+      return;
+    }
+
     const confirmed = await confirmAlert({
       title: "Arc is Already Running",
       message: "Arc needs to be restarted with remote debugging flags. Kill and relaunch?",
@@ -29,7 +24,7 @@ export default async function main() {
   }
 
   try {
-    execSync(`open -a Arc --args ${DEBUG_ARGS.join(" ")}`);
+    launchArcWithRemoteDebugging();
     await showHUD("Arc launched with remote debugging");
   } catch (error) {
     await showHUD(`Failed to launch Arc: ${error}`);

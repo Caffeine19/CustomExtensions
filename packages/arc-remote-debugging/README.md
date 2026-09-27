@@ -1,3 +1,0 @@
-# Arc Remote Debugging
-
-Arc
