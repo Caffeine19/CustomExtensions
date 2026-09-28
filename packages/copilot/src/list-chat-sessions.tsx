@@ -1,7 +1,6 @@
 import {
   ActionPanel,
   Action,
-  Form,
   Icon,
   List,
   LocalStorage,
@@ -23,7 +22,6 @@ import {
   openSessionViaUriHandler,
   openWorkspaceInVSCode,
   openSessionFile,
-  renameSession,
   buildSessionDeepLink,
 } from "./utils/session-reader";
 import { ChatStatus, ResolvedChatSession } from "./types/session";
@@ -118,7 +116,7 @@ export default function Command() {
     LocalStorage.setItem(STORAGE_KEY, value);
   };
 
-  const { data: sessions, isLoading, error, revalidate } = useCachedPromise(loadAllSessions, []);
+  const { data: sessions, isLoading, error } = useCachedPromise(loadAllSessions, []);
 
   if (error) {
     showToast({
@@ -204,14 +202,14 @@ export default function Command() {
       ) : selectedWorkspace !== "__all__" ? (
         // Flat list when a specific workspace is selected
         filteredSessions.map((session) => (
-          <SessionListItem key={session.sessionId} session={session} onRename={revalidate} showWorkspace={false} />
+          <SessionListItem key={session.sessionId} session={session} showWorkspace={false} />
         ))
       ) : (
         // Grouped by time period when showing all workspaces
         TIME_GROUP_ORDER.filter((g) => grouped.has(g)).map((groupName) => (
           <List.Section key={groupName} title={groupName} subtitle={`${grouped.get(groupName)!.length} session(s)`}>
             {grouped.get(groupName)!.map((session) => (
-              <SessionListItem key={session.sessionId} session={session} onRename={revalidate} showWorkspace={true} />
+              <SessionListItem key={session.sessionId} session={session} showWorkspace={true} />
             ))}
           </List.Section>
         ))
@@ -222,11 +220,9 @@ export default function Command() {
 
 function SessionListItem({
   session,
-  onRename,
   showWorkspace = false,
 }: {
   session: ResolvedChatSession;
-  onRename: () => void;
   showWorkspace?: boolean;
 }) {
   const relativeDate = dayjs(session.lastMessageDate).fromNow();
@@ -294,9 +290,6 @@ function SessionListItem({
               }}
             />
           </ActionPanel.Section>
-          <ActionPanel.Section title="Edit">
-            <RenameSessionAction session={session} onRename={onRename} />
-          </ActionPanel.Section>
           <ActionPanel.Section title="Info">
             <Action.CopyToClipboard
               title="Copy as Deep Link"
@@ -357,63 +350,5 @@ function SessionListItem({
         </ActionPanel>
       }
     />
-  );
-}
-
-function RenameSessionAction({ session, onRename }: { session: ResolvedChatSession; onRename: () => void }) {
-  return (
-    <Action.Push
-      title="Rename Session"
-      icon={Icon.Pencil}
-      shortcut={{ modifiers: ["cmd", "shift"], key: "r" }}
-      target={<RenameSessionForm session={session} onRename={onRename} />}
-    />
-  );
-}
-
-function RenameSessionForm({ session, onRename }: { session: ResolvedChatSession; onRename: () => void }) {
-  return (
-    <Form
-      actions={
-        <ActionPanel>
-          <Action.SubmitForm
-            title="Rename"
-            icon={Icon.Checkmark}
-            onSubmit={async (values: { newTitle: string }) => {
-              const newTitle = values.newTitle.trim();
-              if (!newTitle) {
-                await showToast({
-                  style: Toast.Style.Failure,
-                  title: "Title cannot be empty",
-                });
-                return;
-              }
-              try {
-                await Effect.runPromise(renameSession(session, newTitle));
-                await showToast({
-                  style: Toast.Style.Success,
-                  title: "Session renamed",
-                  message: newTitle,
-                });
-                onRename();
-              } catch (e) {
-                await showToast({
-                  style: Toast.Style.Failure,
-                  title: "Failed to rename session",
-                  message: String(e),
-                });
-              }
-            }}
-          />
-        </ActionPanel>
-      }
-    >
-      <Form.TextField
-        id="newTitle"
-        title="New Title"
-        defaultValue={session.title}
-        placeholder="Enter new session title"
-      />
-    </Form>
   );
 }

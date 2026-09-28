@@ -1,11 +1,11 @@
-import { readdirSync, readFileSync, existsSync, writeFileSync } from "fs";
+import { readdirSync, readFileSync, existsSync } from "fs";
 import { join, basename } from "path";
 import { homedir } from "os";
 import { execSync, execFileSync, spawn } from "child_process";
 import { Effect, pipe } from "effect";
 import { sort, unique } from "radash";
 import { ChatStatus, ChatSessionIndex, ResolvedChatSession, VSCodeVariant } from "../types/session";
-import { SessionReadError, SessionWriteError, VSCodeLaunchError } from "../types/errors";
+import { SessionReadError, VSCodeLaunchError } from "../types/errors";
 import { getVariant, getCliCommand, getScheme } from "./vscode";
 
 // ── Preferences ──────────────────────────────────────────────────────────────
@@ -280,7 +280,6 @@ function loadSessionsFromIndex(variant: VSCodeVariant): Effect.Effect<ResolvedCh
       if (!existsSync(storageDir)) return [];
 
       const workspaceDirs = readdirSync(storageDir, { withFileTypes: true }).filter((d) => d.isDirectory());
-      const customTitles = readCustomTitles(variant);
 
       // Resolve workspace info first, then read every index in one pass.
       const workspaces: Array<{ info: WorkspaceInfo; wsDir: string }> = [];
@@ -317,7 +316,7 @@ function loadSessionsFromIndex(variant: VSCodeVariant): Effect.Effect<ResolvedCh
 
           sessions.push({
             sessionId: entry.sessionId,
-            title: customTitles[entry.sessionId] || entry.title || "Untitled",
+            title: entry.title || "Untitled",
             created: new Date(entry.timing?.created ?? entry.lastMessageDate),
             lastMessageDate: new Date(entry.lastMessageDate),
             chatStatus,
@@ -354,50 +353,6 @@ export function loadAllSessions(): Promise<ResolvedChatSession[]> {
       Effect.catchAll(() => Effect.succeed([] as ResolvedChatSession[])),
     ),
   );
-}
-
-// ── Custom titles store ──────────────────────────────────────────────────────
-//
-// VS Code keeps the session index in memory and periodically flushes it back
-// to state.vscdb, overwriting any direct DB edits. We store custom titles in
-// a separate JSON file that VS Code never touches.
-
-type CustomTitles = Record<string, string>; // sessionId → custom title
-
-function getCustomTitlesPath(variant: VSCodeVariant): string {
-  return join(getAppSupportDir(variant), "User/custom-session-titles.json");
-}
-
-function readCustomTitles(variant: VSCodeVariant): CustomTitles {
-  const path = getCustomTitlesPath(variant);
-  if (!existsSync(path)) return {};
-  try {
-    return JSON.parse(readFileSync(path, "utf-8")) as CustomTitles;
-  } catch {
-    return {};
-  }
-}
-
-function writeCustomTitles(variant: VSCodeVariant, titles: CustomTitles): Effect.Effect<void, SessionWriteError> {
-  return Effect.try({
-    try: () => {
-      writeFileSync(getCustomTitlesPath(variant), JSON.stringify(titles, null, 2), "utf-8");
-    },
-    catch: (cause) =>
-      new SessionWriteError({
-        cause,
-        message: "Failed to write custom titles file",
-      }),
-  });
-}
-
-// ── Rename session ───────────────────────────────────────────────────────────
-
-export function renameSession(session: ResolvedChatSession, newTitle: string): Effect.Effect<void, SessionWriteError> {
-  const variant = getVariant();
-  const titles = readCustomTitles(variant);
-  titles[session.sessionId] = newTitle;
-  return writeCustomTitles(variant, titles);
 }
 
 // ── Open session ─────────────────────────────────────────────────────────────

@@ -1,8 +1,8 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "name": "copilot",
-  "title": "Copilot Usage",
-  "description": "View GitHub Copilot premium request usage across multiple accounts.",
+  "title": "VS Code Copilot",
+  "description": "Browse VS Code Copilot chat sessions and start quick chats.",
   "icon": "extension-icon-v5.png",
   "author": "CaffeineCat",
   "categories": [
@@ -11,13 +11,6 @@
   ],
   "license": "MIT",
   "commands": [
-    {
-      "name": "view-copilot-usage",
-      "title": "View Copilot Usage",
-      "subtitle": "GitHub Copilot",
-      "description": "View GitHub Copilot premium request usage for all signed-in accounts.",
-      "mode": "view"
-    },
     {
       "name": "list-chat-sessions",
       "title": "List Chat Sessions",
