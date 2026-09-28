@@ -9,21 +9,35 @@ export interface QuickChatParams {
   prompt: string;
   mode: "agent" | "ask" | "edit";
   workspace?: string;
+  workspaceType?: "folder" | "workspace" | "file";
   addFiles?: string[];
+}
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function isWorkspaceFile(params: QuickChatParams): boolean {
+  return (
+    params.workspaceType === "workspace" || Boolean(params.workspace && params.workspace.endsWith(".code-workspace"))
+  );
+}
+
+function runCli(cliCommand: string, args: string[], options?: Record<string, unknown>): void {
+  const cmd = `${cliCommand} ${args.map((a) => `"${a}"`).join(" ")}`;
+  execSync(cmd, { timeout: 5000, stdio: "ignore", ...options });
 }
 
 // ── Core logic ───────────────────────────────────────────────────────────────
 
-function buildArgs(params: QuickChatParams): string[] {
-  const { prompt, mode, workspace, addFiles } = params;
-  const args: string[] = ["chat", prompt, "-m", mode];
-
-  // When no workspace is specified, reuse the active window.
-  // When a workspace IS specified, omit both flags so VS Code will
-  // match the existing workspace window or open a new one if needed.
-  if (!workspace) {
-    args.push("-r");
-  }
+/**
+ * Build the `code chat` arguments.
+ *
+ * NOTE: The VS Code `chat` subcommand overwrites positional args with `cwd()`,
+ * so workspace file paths must NEVER be passed as positional arguments here.
+ * Workspace targeting is handled separately in `launchQuickChat`.
+ */
+function buildChatArgs(params: QuickChatParams): string[] {
+  const { prompt, mode, addFiles } = params;
+  const args: string[] = ["chat", prompt, "-m", mode, "-r"];
 
   if (addFiles && addFiles.length > 0) {
     for (const file of addFiles) {
@@ -49,18 +63,27 @@ export const launchQuickChat = (params: QuickChatParams): Effect.Effect<void, Em
     }
 
     const cliCommand = getCliCommand();
-    const args = buildArgs(params);
+    const chatArgs = buildChatArgs(params);
 
     yield* Effect.try({
       try: () => {
-        const options: Record<string, unknown> = {
-          timeout: 5000,
-          stdio: "ignore",
-        };
-        if (params.workspace) {
-          options.cwd = params.workspace;
+        if (isWorkspaceFile(params)) {
+          // ── Two-step: open workspace first, then send chat with -r ──
+          // The `chat` subcommand overwrites positional args with cwd(),
+          // so we cannot pass .code-workspace as an argument to `chat`.
+          // Instead: open the workspace file → VS Code activates that window
+          //          then send chat with -r → targets the now-active window.
+          runCli(cliCommand, [params.workspace!]);
+          // Small delay for the workspace window to become active
+          execSync("sleep 0.5");
+          runCli(cliCommand, chatArgs);
+        } else if (params.workspace) {
+          // ── Folder workspace: set as cwd ──
+          runCli(cliCommand, chatArgs, { cwd: params.workspace });
+        } else {
+          // ── No workspace: -r reuses current window ──
+          runCli(cliCommand, chatArgs);
         }
-        execSync(`${cliCommand} ${args.map((arg) => `"${arg}"`).join(" ")}`, options);
       },
       catch: (cause) =>
         new VSCodeLaunchError({

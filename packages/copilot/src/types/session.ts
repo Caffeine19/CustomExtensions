@@ -3,8 +3,8 @@ export interface ChatSessionEntryMetadata {
   sessionId: string;
   title: string;
   lastMessageDate: number;
-  timing: {
-    created: number;
+  timing?: {
+    created?: number;
     lastRequestStarted?: number;
     lastRequestEnded?: number;
   };
