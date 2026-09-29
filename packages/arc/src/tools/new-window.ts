@@ -1,4 +1,4 @@
-import { getValidatedSpaceTitle, makeNewWindow } from "../arc";
+import { getValidatedSpace, makeNewWindow } from "../arc";
 
 type Input = {
   /**
@@ -11,7 +11,7 @@ type Input = {
 };
 
 const tool = async (input: Input) => {
-  const space = await getValidatedSpaceTitle(input.spaceId);
+  const space = await getValidatedSpace(input.spaceId);
   await makeNewWindow({ space: space });
 };
 

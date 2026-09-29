@@ -1,5 +1,13 @@
 # Arc Changelog
 
+## [Show space icons and read spaces from Arc's sidebar database] - 2026-09-29
+
+- Show each space's native Arc icon (emoji or Ionicons glyph) in "Search Spaces", the menu bar, and the "Open in Space" submenu
+- Bundle the 56 Ionicons SVGs used by Arc's icon picker (`assets/space-icons/`, MIT licensed)
+- Read the space list (id, title, icon) from Arc's `StorableSidebar.json` instead of building it over AppleScript — icons are unavailable via AppleScript, and the list now works even when Arc is not running
+- Address spaces by their stable UUID (`first space whose id is ...`) everywhere instead of a fragile 1-based index; this also fixes ambiguity between spaces sharing a title
+- Keep a single minimal AppleScript call to detect the active space (per-window UI state that is not stored in the JSON)
+
 ## [Migrate to CustomExtensions and add Remote Debugging command] - 2026-09-27
 
 - Migrate the extension into the CustomExtensions monorepo (`packages/arc`)

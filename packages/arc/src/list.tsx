@@ -9,6 +9,7 @@ import {
   OpenSpaceInNewWindowAction,
 } from "./actions";
 import { searchSpacesPreferences } from "./preferences";
+import { getSpaceIcon } from "./space-icons";
 import { HistoryEntry, Space, Download, Suggestion, Tab } from "./types";
 import { getDomain, getLastVisitedAt, getDownloadedAt, getSpaceTitle } from "./utils";
 
@@ -35,6 +36,7 @@ export function HistoryEntryListItem(props: { entry: HistoryEntry; searchText: s
 export function SpaceListItem(props: { space: Space }) {
   return (
     <List.Item
+      icon={getSpaceIcon(props.space)}
       title={getSpaceTitle(props.space)}
       actions={
         <ActionPanel>

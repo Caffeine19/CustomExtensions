@@ -23,14 +23,13 @@ export function getDownloadedAt(entry: Download) {
 }
 
 export function getSpaceTitle(space: Space) {
-  return space.title || `Space ${space.id}`;
+  return space.title || "Untitled";
 }
 
-export function findSpaceInSpaces(spaceId: string, spaces: Space[]): string | undefined {
-  const space = spaces.find(
-    (s) => getSpaceTitle(s).toLowerCase() === spaceId.toLowerCase() || s.id.toString() === spaceId,
+export function findSpaceInSpaces(spaceId: string, spaces: Space[]): Space | undefined {
+  return spaces.find(
+    (s) => getSpaceTitle(s).toLowerCase() === spaceId.toLowerCase() || s.id.toLowerCase() === spaceId.toLowerCase(),
   );
-  return space && getSpaceTitle(space);
 }
 
 export function getKey(tab: Tab) {

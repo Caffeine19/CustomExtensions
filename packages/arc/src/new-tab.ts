@@ -1,12 +1,12 @@
 import { closeMainWindow, LaunchProps, showToast, Toast } from "@raycast/api";
-import { getValidatedSpaceTitle, makeNewTab } from "./arc";
+import { getValidatedSpace, makeNewTab } from "./arc";
 import { newTabPreferences } from "./preferences";
-import { URLArguments } from "./types";
+import { Space, URLArguments } from "./types";
 import { validateURL } from "./utils";
 
 const DEFAULT_PAGE = "arc://newtab";
 
-const handleOpenNewTab = async (newTabUrl: string, space?: string) => {
+const handleOpenNewTab = async (newTabUrl: string, space?: Space) => {
   try {
     if (await validateURL(newTabUrl)) {
       // Append https:// if protocol is missing
@@ -29,7 +29,7 @@ export default async function command(props: LaunchProps<{ arguments: URLArgumen
   const { fallbackText } = props;
   const newTabUrl = url || fallbackText || newTabPreferences.url || DEFAULT_PAGE;
 
-  const space = await getValidatedSpaceTitle(props.arguments.space);
+  const space = await getValidatedSpace(props.arguments.space);
 
   if (newTabUrl.includes(",")) {
     const multileTabs = newTabUrl.split(",").map((url) => handleOpenNewTab(url.trim(), space));

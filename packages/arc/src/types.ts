@@ -15,10 +15,15 @@ export type Tab = {
 
 export type TabLocation = "topApp" | "pinned" | "unpinned";
 
+/** Arc space icon: an emoji (iconType.emoji_v2) or an Ionicons glyph name (iconType.icon). */
+export type SpaceIcon = { emoji: string } | { ionicon: string };
+
 export type Space = {
+  /** The space UUID, identical to AppleScript's `id of space`. */
   id: string;
   title?: string;
   isActive: boolean;
+  icon?: SpaceIcon;
 };
 
 export type Download = {

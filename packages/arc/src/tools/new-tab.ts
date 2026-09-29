@@ -1,5 +1,6 @@
-import { getValidatedSpaceTitle, makeNewTab } from "../arc";
+import { getValidatedSpace, makeNewTab } from "../arc";
 import { newTabPreferences } from "../preferences";
+import { Space } from "../types";
 import { validateURL } from "../utils";
 
 type Input = {
@@ -21,7 +22,7 @@ type Input = {
 
 const DEFAULT_PAGE = "arc://newtab";
 
-const handleOpenNewTab = async (newTabUrl: string, space?: string) => {
+const handleOpenNewTab = async (newTabUrl: string, space?: Space) => {
   if (await validateURL(newTabUrl)) {
     // Append https:// if protocol is missing
     const openURL = !/^\S+?:\/\//i.test(newTabUrl) ? "https://" + newTabUrl : newTabUrl;
@@ -33,7 +34,7 @@ const tool = async (input: Input) => {
   const url = input.url;
   const newTabUrl = url || newTabPreferences.url || DEFAULT_PAGE;
 
-  const space = await getValidatedSpaceTitle(input.spaceId);
+  const space = await getValidatedSpace(input.spaceId);
 
   if (newTabUrl.includes(",")) {
     const multileTabs = newTabUrl.split(",").map((url: string) => handleOpenNewTab(url.trim(), space));

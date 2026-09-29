@@ -1,5 +1,6 @@
 import { runAppleScript } from "@raycast/utils";
 import { ensureArcLaunched, isArcRunning } from "./launch-arc";
+import { readSidebarSpaces } from "./sidebar";
 import { Space, Tab } from "./types";
 import { findSpaceInSpaces } from "./utils";
 
@@ -144,12 +145,12 @@ export async function reloadTab(tab: Tab | string) {
   await runAppleScriptActionOnTab(typeof tab === "string" ? tab : tab.id, "reload");
 }
 
-export async function makeNewTab(url: string, space?: string) {
+export async function makeNewTab(url: string, space?: Space) {
   await ensureArcIsRunning();
   await runAppleScript(`
     tell application "Arc"
       tell front window
-        ${space ? `tell space "${space}" to focus` : ""}
+        ${space ? `tell (first space whose id is "${space.id}") to focus` : ""}
         make new tab with properties {URL:"${url}"}
       end tell
 
@@ -158,11 +159,11 @@ export async function makeNewTab(url: string, space?: string) {
   `);
 }
 
-export async function getValidatedSpaceTitle(spaceId: string | undefined) {
-  if (spaceId) {
+export async function getValidatedSpace(spaceIdOrTitle: string | undefined): Promise<Space | undefined> {
+  if (spaceIdOrTitle) {
     const spaces = await getSpaces();
     if (spaces) {
-      return findSpaceInSpaces(spaceId, spaces);
+      return findSpaceInSpaces(spaceIdOrTitle, spaces);
     }
   }
 
@@ -173,7 +174,7 @@ export async function getValidatedSpaceTitle(spaceId: string | undefined) {
 export type MakeNewWindowOptions = {
   incognito?: boolean;
   url?: string;
-  space?: string;
+  space?: Space;
 };
 
 export async function makeNewWindow(options: MakeNewWindowOptions = {}): Promise<void> {
@@ -183,7 +184,7 @@ export async function makeNewWindow(options: MakeNewWindowOptions = {}): Promise
       make new window with properties {incognito:${options.incognito ?? false}}
       activate
 
-      ${options.space ? `tell front window to tell space "${options.space}" to focus` : ""}
+      ${options.space ? `tell front window to tell (first space whose id is "${options.space.id}") to focus` : ""}
       ${options.url ? `tell front window to make new tab with properties {URL:"${options.url}"}` : ""}
     end tell
   `);
@@ -224,7 +225,7 @@ export async function makeNewTabWithinSpace(url: string, space: Space) {
   await runAppleScript(`
     tell application "Arc"
       tell front window      
-        tell space ${space.id}
+        tell (first space whose id is "${space.id}")
           make new tab with properties {URL:"${url}"}
         end tell
       end tell
@@ -243,7 +244,7 @@ export async function selectSpaceById(spaceId: string) {
   await runAppleScript(`
     tell application "Arc"
       tell front window
-        tell space ${spaceId} to focus
+        tell (first space whose id is "${spaceId}") to focus
       end tell
       
       activate
@@ -251,38 +252,33 @@ export async function selectSpaceById(spaceId: string) {
   `);
 }
 
-export async function getSpaces() {
-  await ensureArcIsRunning();
-  const response = await runAppleScript(`
-    set _output to ""
+export async function getSpaces(): Promise<Space[] | undefined> {
+  const spaces = await readSidebarSpaces();
+  if (!spaces) {
+    return undefined;
+  }
 
+  // isActive is per-window live UI state (not stored in the JSON); only this bit goes through AppleScript.
+  // When Arc is not running, every space stays inactive.
+  if (!isArcRunning()) {
+    return spaces;
+  }
+
+  try {
+    const response = await runAppleScript(`
     tell application "Arc"
-      set _space_index to 1
-      
+      if (count of windows) is 0 then return ""
       tell front window
-        set _active_space_id to id of active space
-        
-        repeat with _space in spaces
-          set _title to get title of _space
-          set _is_active to (id of _space is equal to _active_space_id)
-          
-          set _output to (_output & "{ \\"title\\": \\"" & _title & "\\", \\"id\\": " & _space_index & ", \\"isActive\\": " & _is_active & " }")
-          
-          if _space_index < (count spaces) then
-            set _output to (_output & ",\\n")
-          else
-            set _output to (_output & "\\n")
-          end if
-          
-          set _space_index to _space_index + 1
-        end repeat
+        return id of active space
       end tell
     end tell
-    
-    return "[\\n" & _output & "\\n]"
   `);
+    const activeSpaceId = (response || "").trim();
 
-  return response ? (JSON.parse(response) as Space[]) : undefined;
+    return spaces.map((space) => ({ ...space, isActive: activeSpaceId !== "" && space.id === activeSpaceId }));
+  } catch {
+    return spaces;
+  }
 }
 
 export async function getActiveSpace() {
@@ -324,9 +320,8 @@ export async function getTabsInSpace(spaceId: string) {
 
     tell application "Arc"
       tell front window
-        set _space_index to 1
         repeat with _space in spaces
-          if _space_index is equal to (${spaceId} as number) then
+          if (id of _space) is equal to "${spaceId}" then
             set allTabs to properties of every tab of _space
             set tabsCount to count of allTabs
             repeat with i from 1 to tabsCount
@@ -346,7 +341,6 @@ export async function getTabsInSpace(spaceId: string) {
             end repeat
             exit repeat
           end if
-          set _space_index to _space_index + 1
         end repeat
       end tell
     end tell

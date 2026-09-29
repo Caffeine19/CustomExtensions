@@ -12,6 +12,7 @@ import {
   selectSpace,
   selectTab,
 } from "./arc";
+import { getSpaceIcon } from "./space-icons";
 import { Space, Tab } from "./types";
 import { getSpaceTitle, isTab, showFailureToast } from "./utils";
 
@@ -116,7 +117,12 @@ function OpenInSpaceAction(props: { url: string }) {
       onOpen={() => setOpen(true)}
     >
       {data?.map((space) => (
-        <Action key={space.id} title={getSpaceTitle(space)} onAction={() => openSpace(space)} />
+        <Action
+          key={space.id}
+          icon={getSpaceIcon(space)}
+          title={getSpaceTitle(space)}
+          onAction={() => openSpace(space)}
+        />
       ))}
     </ActionPanel.Submenu>
   );
@@ -138,7 +144,7 @@ export function OpenSpaceAction(props: { space: Space }) {
 export function OpenSpaceInNewWindowAction(props: { space: Space }) {
   async function handleAction() {
     try {
-      await makeNewWindow({ space: getSpaceTitle(props.space) });
+      await makeNewWindow({ space: props.space });
       closeMainWindow();
     } catch (e) {
       await showFailureToast(e, { title: "Failed opening Space in new window" });

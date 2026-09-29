@@ -2,6 +2,7 @@ import { Image, launchCommand, LaunchType, MenuBarExtra, open, openCommandPrefer
 import { getFavicon, useCachedPromise } from "@raycast/utils";
 import { truncate } from "lodash";
 import { findTab, getSpaces, getTabs, selectSpace, selectTab } from "./arc";
+import { getSpaceIcon } from "./space-icons";
 import { getDomain, getKey, getShortcut, getSpaceTitle } from "./utils";
 
 const LIMIT = 25;
@@ -19,6 +20,7 @@ export default function Command() {
         {spaces?.slice(0, LIMIT).map((space, index) => (
           <MenuBarExtra.Item
             key={space.id}
+            icon={getSpaceIcon(space)}
             title={truncate(getSpaceTitle(space))}
             shortcut={getShortcut(["ctrl"], index)}
             onAction={async () => await selectSpace(space)}
