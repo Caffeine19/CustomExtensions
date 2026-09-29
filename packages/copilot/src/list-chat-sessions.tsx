@@ -12,7 +12,6 @@ import {
   closeMainWindow,
   showToast,
 } from "@raycast/api";
-import { useCachedPromise } from "@raycast/utils";
 
 import dayjs, { type Dayjs } from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -23,11 +22,11 @@ import { isLeft } from "effect/Either";
 import { ChatStatus, ResolvedChatSession } from "./types/session";
 import {
   buildSessionDeepLink,
-  loadAllSessions,
   openSessionFile,
   openSessionViaUriHandler,
   openWorkspaceInVSCode,
 } from "./utils/session-reader";
+import { useAllSessions } from "./utils/use-all-sessions";
 
 dayjs.extend(relativeTime);
 dayjs.extend(updateLocale);
@@ -118,7 +117,7 @@ export default function Command() {
     LocalStorage.setItem(STORAGE_KEY, value);
   };
 
-  const { data: sessions, isLoading, error } = useCachedPromise(loadAllSessions, []);
+  const { sessions, isLoading, error } = useAllSessions();
 
   if (error) {
     showToast({

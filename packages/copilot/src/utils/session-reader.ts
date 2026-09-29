@@ -358,6 +358,22 @@ export function loadAllSessions(): Promise<ResolvedChatSession[]> {
   );
 }
 
+/**
+ * Rehydrate the date fields of a session restored from `useCachedPromise`'s cache.
+ *
+ * The cache is persisted as JSON, where `Dayjs` values round-trip through
+ * `toJSON()` and come back as plain strings — calling `.fromNow()`/`.isSame()`
+ * on them throws. `dayjs()` accepts strings, Dates and Dayjs instances alike,
+ * so this wrapper is idempotent and safe to run on every load.
+ */
+export function rehydrateSessionDates(session: ResolvedChatSession): ResolvedChatSession {
+  return {
+    ...session,
+    created: dayjs(session.created),
+    lastMessageDate: dayjs(session.lastMessageDate),
+  };
+}
+
 // ── Open session ─────────────────────────────────────────────────────────────
 
 /**

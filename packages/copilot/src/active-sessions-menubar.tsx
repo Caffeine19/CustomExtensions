@@ -1,5 +1,4 @@
 import { Color, Icon, LaunchType, MenuBarExtra, Toast, closeMainWindow, launchCommand, showToast } from "@raycast/api";
-import { useCachedPromise } from "@raycast/utils";
 
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -7,7 +6,8 @@ import { Effect } from "effect";
 import { isLeft } from "effect/Either";
 
 import { ChatStatus, ResolvedChatSession } from "./types/session";
-import { loadAllSessions, openSessionViaUriHandler } from "./utils/session-reader";
+import { openSessionViaUriHandler } from "./utils/session-reader";
+import { useAllSessions } from "./utils/use-all-sessions";
 
 dayjs.extend(relativeTime);
 
@@ -87,7 +87,7 @@ function SessionItem({ session, showWorkspace = false }: { session: ResolvedChat
 // ── Component ────────────────────────────────────────────────────────────────
 
 export default function Command() {
-  const { data: sessions, isLoading, revalidate } = useCachedPromise(loadAllSessions, []);
+  const { sessions, isLoading, revalidate } = useAllSessions();
 
   const nonEmpty = sessions?.filter((s) => s.chatStatus !== "empty") ?? [];
   const recentSessions = nonEmpty
