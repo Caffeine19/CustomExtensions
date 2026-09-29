@@ -1,0 +1,96 @@
+{
+  "folders": [
+    {
+      "name": "custom-extensions",
+      "path": "../",
+    },
+    {
+      "name": "arc",
+      "path": "../packages/arc",
+    },
+    {
+      "name": "audio-device",
+      "path": "../packages/audio-device",
+    },
+    {
+      "name": "bitwarden",
+      "path": "../packages/bitwarden",
+    },
+    {
+      "name": "copilot",
+      "path": "../packages/copilot",
+    },
+    {
+      "name": "dingtalk",
+      "path": "../packages/dingtalk",
+    },
+    {
+      "name": "endel",
+      "path": "../packages/endel",
+    },
+    {
+      "name": "hammerwm",
+      "path": "../packages/hammerwm",
+    },
+    {
+      "name": "link-editor",
+      "path": "../packages/link-editor",
+    },
+    {
+      "name": "markitdown",
+      "path": "../packages/markitdown",
+    },
+    {
+      "name": "microhard-edge",
+      "path": "../packages/microhard-edge",
+    },
+    {
+      "name": "mirror-screen",
+      "path": "../packages/mirror-screen",
+    },
+    {
+      "name": "pointer-control",
+      "path": "../packages/pointer-control",
+    },
+    {
+      "name": "restart-without-reopen",
+      "path": "../packages/restart-without-reopen",
+    },
+    {
+      "name": "spark",
+      "path": "../packages/spark",
+    },
+    {
+      "name": "universol-control",
+      "path": "../packages/universol-control",
+    },
+    {
+      "name": "which-key",
+      "path": "../packages/which-key",
+    },
+    {
+      "name": "wifi-switcher",
+      "path": "../packages/wifi-switcher",
+    },
+    {
+      "name": "workspace",
+      "path": "../packages/workspace",
+    },
+    {
+      "name": "xiaomi-mimo",
+      "path": "../packages/xiaomi-mimo",
+    },
+    {
+      "name": "xiaomi-mimocode",
+      "path": "../packages/xiaomi-mimocode",
+    },
+    {
+      "name": "zentao",
+      "path": "../packages/zentao",
+    },
+    {
+      "name": "zhi-hu",
+      "path": "../packages/zhi-hu",
+    },
+  ],
+}

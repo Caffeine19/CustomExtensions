@@ -12,7 +12,6 @@ dist/
 
 # IDE
 .idea/
-.vscode/
 
 # pnpm
 pnpm-debug.log*
