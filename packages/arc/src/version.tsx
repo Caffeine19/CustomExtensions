@@ -1,5 +1,6 @@
 import { Detail, environment } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
+import type { JSX } from "react";
 import { join } from "path";
 import { lt } from "semver";
 import { getVersion } from "./arc";

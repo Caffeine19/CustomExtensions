@@ -1,6 +1,7 @@
 import { homedir } from "os";
 import { existsSync, readFileSync } from "fs";
 import { join } from "path";
+import type { JSX } from "react";
 import { HistoryEntry } from "./types";
 import { useSQL, executeSQL } from "@raycast/utils";
 
