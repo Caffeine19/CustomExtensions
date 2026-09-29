@@ -1,11 +1,13 @@
-import { Color, Icon, Toast, launchCommand, LaunchType, MenuBarExtra, closeMainWindow, showToast } from "@raycast/api";
+import { Color, Icon, LaunchType, MenuBarExtra, Toast, closeMainWindow, launchCommand, showToast } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
-import { Effect } from "effect";
-import { isLeft } from "effect/Either";
+
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import { loadAllSessions, openSessionViaUriHandler } from "./utils/session-reader";
+import { Effect } from "effect";
+import { isLeft } from "effect/Either";
+
 import { ChatStatus, ResolvedChatSession } from "./types/session";
+import { loadAllSessions, openSessionViaUriHandler } from "./utils/session-reader";
 
 dayjs.extend(relativeTime);
 

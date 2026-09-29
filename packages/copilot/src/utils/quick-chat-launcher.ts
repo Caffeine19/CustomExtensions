@@ -1,5 +1,7 @@
 import { execSync } from "child_process";
+
 import { Effect } from "effect";
+
 import { EmptyPromptError, VSCodeLaunchError } from "../types/errors";
 import { getCliCommand } from "./vscode";
 

@@ -1,13 +1,15 @@
-import { readdirSync, readFileSync, existsSync } from "fs";
-import { join, basename } from "path";
+import { execFileSync, execSync, spawn } from "child_process";
+import { existsSync, readFileSync, readdirSync } from "fs";
 import { homedir } from "os";
-import { execSync, execFileSync, spawn } from "child_process";
+import { basename, join } from "path";
+
+import dayjs from "dayjs";
 import { Effect, pipe } from "effect";
 import { sort, unique } from "radash";
-import { ChatStatus, ChatSessionIndex, ResolvedChatSession, VSCodeVariant } from "../types/session";
+
 import { SessionReadError, VSCodeLaunchError } from "../types/errors";
-import { getVariant, getCliCommand, getScheme } from "./vscode";
-import dayjs from "dayjs";
+import { ChatSessionIndex, ChatStatus, ResolvedChatSession, VSCodeVariant } from "../types/session";
+import { getCliCommand, getScheme, getVariant } from "./vscode";
 
 // ── Preferences ──────────────────────────────────────────────────────────────
 

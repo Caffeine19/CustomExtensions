@@ -1,18 +1,20 @@
+import { execFile } from "child_process";
 import { existsSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
-import { execFile } from "child_process";
+
 import { Effect, pipe } from "effect";
-import { getVariant } from "./vscode";
+
 import { RecentProjectsError } from "../types/errors";
 import {
   EntryLike,
   FileEntry,
   FolderEntry,
-  WorkspaceEntry,
   RecentEntries,
   RecentProject,
+  WorkspaceEntry,
 } from "../types/recent-projects";
+import { getVariant } from "./vscode";
 
 const isFolderEntry = (entry: EntryLike): entry is FolderEntry => "folderUri" in entry;
 

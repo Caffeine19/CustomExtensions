@@ -1,8 +1,10 @@
-import { Form, ActionPanel, Action, Icon, showToast, Toast, closeMainWindow } from "@raycast/api";
-import { useForm, FormValidation, usePromise } from "@raycast/utils";
+import { Action, ActionPanel, Form, Icon, Toast, closeMainWindow, showToast } from "@raycast/api";
+import { FormValidation, useForm, usePromise } from "@raycast/utils";
+
 import { Effect } from "effect";
 import { isLeft } from "effect/Either";
-import { launchQuickChat, QuickChatParams } from "./utils/quick-chat-launcher";
+
+import { QuickChatParams, launchQuickChat } from "./utils/quick-chat-launcher";
 import { fetchRecentProjects } from "./utils/recent-projects";
 
 type FormValues = Omit<QuickChatParams, "workspace" | "workspaceType" | "addFiles"> & {

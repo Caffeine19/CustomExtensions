@@ -1,30 +1,33 @@
+import { useEffect, useMemo, useState } from "react";
+
 import {
-  ActionPanel,
   Action,
+  ActionPanel,
+  Clipboard,
+  Color,
   Icon,
   List,
   LocalStorage,
-  showToast,
   Toast,
-  Color,
-  Clipboard,
   closeMainWindow,
+  showToast,
 } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
+
 import dayjs, { type Dayjs } from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import updateLocale from "dayjs/plugin/updateLocale";
-import { useState, useMemo, useEffect } from "react";
 import { Effect } from "effect";
 import { isLeft } from "effect/Either";
+
+import { ChatStatus, ResolvedChatSession } from "./types/session";
 import {
+  buildSessionDeepLink,
   loadAllSessions,
+  openSessionFile,
   openSessionViaUriHandler,
   openWorkspaceInVSCode,
-  openSessionFile,
-  buildSessionDeepLink,
 } from "./utils/session-reader";
-import { ChatStatus, ResolvedChatSession } from "./types/session";
 
 dayjs.extend(relativeTime);
 dayjs.extend(updateLocale);
