@@ -33,9 +33,8 @@ function runCli(cliCommand: string, args: string[], options?: Record<string, unk
 /**
  * Build the `code chat` arguments.
  *
- * NOTE: The VS Code `chat` subcommand overwrites positional args with `cwd()`,
- * so workspace file paths must NEVER be passed as positional arguments here.
- * Workspace targeting is handled separately in `launchQuickChat`.
+ * NOTE: The VS Code `chat` subcommand overwrites positional args with `cwd()`, so workspace file paths must NEVER be
+ * passed as positional arguments here. Workspace targeting is handled separately in `launchQuickChat`.
  */
 function buildChatArgs(params: QuickChatParams): string[] {
   const { prompt, mode, addFiles } = params;
@@ -55,8 +54,7 @@ function buildChatArgs(params: QuickChatParams): string[] {
 /**
  * Launch a quick chat session with GitHub Copilot via VS Code.
  *
- * Returns an `Effect` that resolves to `void` on success or fails with
- * `EmptyPromptError` | `VSCodeLaunchError`.
+ * Returns an `Effect` that resolves to `void` on success or fails with `EmptyPromptError` | `VSCodeLaunchError`.
  */
 export const launchQuickChat = (params: QuickChatParams): Effect.Effect<void, EmptyPromptError | VSCodeLaunchError> =>
   Effect.gen(function* () {

@@ -50,8 +50,8 @@ dayjs.updateLocale("en", {
 });
 
 /**
- * Categorize a session into a time-based group based on its last update time.
- * Used when "All Workspaces" is selected to group sessions chronologically.
+ * Categorize a session into a time-based group based on its last update time. Used when "All Workspaces" is selected to
+ * group sessions chronologically.
  */
 function getTimeGroup(date: Dayjs): string {
   const now = dayjs();

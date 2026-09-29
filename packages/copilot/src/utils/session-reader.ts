@@ -171,10 +171,7 @@ interface AgentSessionCacheEntry {
   archived?: boolean;
 }
 
-/**
- * Read the agentSessions.state.cache from state.vscdb.
- * Returns the set of session IDs that are archived.
- */
+/** Read the agentSessions.state.cache from state.vscdb. Returns the set of session IDs that are archived. */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- Kept for future use; currently causes Raycast to kill the extension
 function readArchivedSessionIds(dbPath: string): Set<string> {
   const archived = new Set<string>();
@@ -214,25 +211,24 @@ const IN_PROGRESS_TIMING_THRESHOLD_MS = 1000;
  *
  * How VS Code writes timing (from chatModel.ts `timing` getter):
  *
- *   lastRequestStarted = request.timestamp          (set via Date.now() in addRequest)
- *   lastRequestEnded   = response.completedAt        (set only when Complete/Cancelled/Failed)
- *                     ?? response.timestamp          (fallback: set via a SEPARATE Date.now()
- *                                                     call inside ChatResponseModel constructor,
- *                                                     which runs synchronously right after)
+ * - `lastRequestStarted` = request.timestamp — set via Date.now() in addRequest.
+ * - `lastRequestEnded` = response.completedAt — set only when Complete/Cancelled/Failed. Otherwise it falls back to
+ *   response.timestamp, which is a SEPARATE Date.now() call inside the ChatResponseModel constructor, running
+ *   synchronously right after.
  *
  * Therefore:
- *   - In-progress:         completedAt = undefined  →  lastRequestEnded = response.timestamp
- *                          Two Date.now() calls in quick succession → diff is 0–1 ms
- *   - Completed/Cancelled: completedAt = actual end time → diff is >> 1 s (at minimum a full
- *                          network round-trip + model inference)
  *
- * IMPORTANT: chatSessionStore.ts `getSessionMetadata` explicitly converts
- * Pending (0) and NeedsInput (4) → Cancelled (2) before persisting. So
- * `lastResponseState=2` means either "user stopped" OR "was in-progress when
- * VS Code serialized". Timing is the only way to tell them apart.
+ * - In-progress: completedAt = undefined → lastRequestEnded = response.timestamp. Two Date.now() calls in quick
+ *   succession → diff is 0–1 ms.
+ * - Completed/Cancelled: completedAt = actual end time → diff is >> 1 s (at minimum a full network round-trip + model
+ *   inference).
  *
- * ResponseModelState (stored as lastResponseState number):
- *   0 = Pending, 1 = Complete, 2 = Cancelled, 3 = Failed, 4 = NeedsInput
+ * IMPORTANT: chatSessionStore.ts `getSessionMetadata` explicitly converts Pending (0) and NeedsInput (4) → Cancelled
+ * (2) before persisting. So `lastResponseState=2` means either "user stopped" OR "was in-progress when VS Code
+ * serialized". Timing is the only way to tell them apart.
+ *
+ * ResponseModelState (stored as lastResponseState number): 0 = Pending, 1 = Complete, 2 = Cancelled, 3 = Failed, 4 =
+ * NeedsInput
  */
 function deriveChatStatus(
   isEmpty: boolean | undefined,
@@ -361,10 +357,9 @@ export function loadAllSessions(): Promise<ResolvedChatSession[]> {
 /**
  * Rehydrate the date fields of a session restored from `useCachedPromise`'s cache.
  *
- * The cache is persisted as JSON, where `Dayjs` values round-trip through
- * `toJSON()` and come back as plain strings — calling `.fromNow()`/`.isSame()`
- * on them throws. `dayjs()` accepts strings, Dates and Dayjs instances alike,
- * so this wrapper is idempotent and safe to run on every load.
+ * The cache is persisted as JSON, where `Dayjs` values round-trip through `toJSON()` and come back as plain strings —
+ * calling `.fromNow()`/`.isSame()` on them throws. `dayjs()` accepts strings, Dates and Dayjs instances alike, so this
+ * wrapper is idempotent and safe to run on every load.
  */
 export function rehydrateSessionDates(session: ResolvedChatSession): ResolvedChatSession {
   return {
@@ -379,12 +374,10 @@ export function rehydrateSessionDates(session: ResolvedChatSession): ResolvedCha
 /**
  * Build a VS Code deep link URL for a chat session.
  *
- * Uses the built-in `vscode://…?session=<uri>` protocol introduced in
- * VS Code 1.128+. The session URI follows the `vscode-chat-session://`
- * scheme and does not require a companion extension.
+ * Uses the built-in `vscode://…?session=<uri>` protocol introduced in VS Code 1.128+. The session URI follows the
+ * `vscode-chat-session://` scheme and does not require a companion extension.
  *
- * Matches VS Code's own "Open in VS Code" action (OpenInVSCodeAction in
- * sessions/browser/actions/vscodeActions.ts).
+ * Matches VS Code's own "Open in VS Code" action (OpenInVSCodeAction in sessions/browser/actions/vscodeActions.ts).
  *
  * @see https://code.visualstudio.com/updates/v1_128#_deep-links-to-a-specific-chat
  */
@@ -398,9 +391,7 @@ export function buildSessionDeepLink(session: ResolvedChatSession): string {
   return `${scheme}://file${encodeURI(session.workspacePath)}?${params.toString()}`;
 }
 
-/**
- * Open a chat session via the native VS Code deep link.
- */
+/** Open a chat session via the native VS Code deep link. */
 export const openSessionViaUriHandler = (session: ResolvedChatSession): Effect.Effect<void, VSCodeLaunchError> =>
   Effect.try({
     try: () => {
@@ -414,9 +405,7 @@ export const openSessionViaUriHandler = (session: ResolvedChatSession): Effect.E
       }),
   });
 
-/**
- * Open the workspace folder in VS Code without opening a specific session.
- */
+/** Open the workspace folder in VS Code without opening a specific session. */
 export const openWorkspaceInVSCode = (session: ResolvedChatSession): Effect.Effect<void, VSCodeLaunchError> =>
   Effect.try({
     try: () => {
@@ -430,9 +419,7 @@ export const openWorkspaceInVSCode = (session: ResolvedChatSession): Effect.Effe
       }),
   });
 
-/**
- * Open the raw .jsonl session file in the default editor.
- */
+/** Open the raw .jsonl session file in the default editor. */
 export const openSessionFile = (session: ResolvedChatSession): Effect.Effect<void, VSCodeLaunchError> =>
   Effect.try({
     try: () => {

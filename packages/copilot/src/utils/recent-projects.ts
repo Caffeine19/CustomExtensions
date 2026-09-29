@@ -24,8 +24,7 @@ const isWorkspaceEntry = (entry: EntryLike): entry is WorkspaceEntry =>
 const isFileEntry = (entry: EntryLike): entry is FileEntry => "fileUri" in entry;
 
 /**
- * VS Code 1.118+ moved `history.recentlyOpenedPathsList` from
- * `globalStorage/state.vscdb` (APPLICATION scope) to
+ * VS Code 1.118+ moved `history.recentlyOpenedPathsList` from `globalStorage/state.vscdb` (APPLICATION scope) to
  * `~/.<sharedDataFolderName>/sharedStorage/state.vscdb` (APPLICATION_SHARED scope).
  */
 const sharedDataFolderNames: Record<string, string> = {
@@ -34,8 +33,8 @@ const sharedDataFolderNames: Record<string, string> = {
 };
 
 /**
- * Resolve the path to the VS Code SQLite database that stores recent entries.
- * Checks the new shared storage location first, then falls back to legacy.
+ * Resolve the path to the VS Code SQLite database that stores recent entries. Checks the new shared storage location
+ * first, then falls back to legacy.
  */
 const getDbPath = (): string => {
   const variant = getVariant();
@@ -55,9 +54,7 @@ const getDbPath = (): string => {
 const SQL_QUERY =
   "SELECT json_extract(value, '$.entries') as entries FROM ItemTable WHERE key = 'history.recentlyOpenedPathsList'";
 
-/**
- * Query VS Code's SQLite database for recent entries via `sqlite3` CLI.
- */
+/** Query VS Code's SQLite database for recent entries via `sqlite3` CLI. */
 const queryRecentEntries = (dbPath: string): Effect.Effect<EntryLike[], RecentProjectsError> =>
   Effect.async<EntryLike[], RecentProjectsError>((resume) => {
     execFile("/usr/bin/sqlite3", ["-json", dbPath, SQL_QUERY], { encoding: "utf-8" }, (error, stdout) => {

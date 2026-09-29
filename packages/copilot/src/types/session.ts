@@ -29,10 +29,11 @@ export interface ChatSessionIndex {
  * Chat session status derived from metadata.
  *
  * Maps from VS Code's `ResponseModelState` enum:
- *   Pending → "in-progress"
- *   Complete / Cancelled → "completed"
- *   Failed → "failed"
- *   NeedsInput → "needs-input"
+ *
+ * - Pending → "in-progress"
+ * - Complete / Cancelled → "completed"
+ * - Failed → "failed"
+ * - NeedsInput → "needs-input"
  *
  * "empty" is a local-only status for sessions with no messages.
  */
