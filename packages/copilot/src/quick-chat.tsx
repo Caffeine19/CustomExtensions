@@ -5,7 +5,7 @@ import { isLeft } from "effect/Either";
 import { launchQuickChat, QuickChatParams } from "./utils/quick-chat-launcher";
 import { fetchRecentProjects } from "./utils/recent-projects";
 
-type FormValues = Omit<QuickChatParams, "workspace" | "addFiles"> & {
+type FormValues = Omit<QuickChatParams, "workspace" | "workspaceType" | "addFiles"> & {
   workspace: string;
   files: string[];
 };
@@ -19,12 +19,17 @@ export default function Command() {
 
       await closeMainWindow();
 
+      // Determine workspace type from the selected project
+      const selectedProject = projects.find((p) => p.path === workspace);
+      const workspaceType = selectedProject?.entryType;
+
       const either = await Effect.runPromise(
         Effect.either(
           launchQuickChat({
             prompt: prompt.trim(),
             mode,
             workspace: workspace || undefined,
+            workspaceType,
             addFiles: files.length > 0 ? files : undefined,
           }),
         ),
