@@ -1,4 +1,4 @@
-import { Color, Icon, Image } from "@raycast/api";
+import { Icon, Image } from "@raycast/api";
 import { Space } from "./types";
 
 /** Whitelist of Ionicons assets (SVGs under assets/space-icons/, kebab-case file names). */
@@ -83,7 +83,14 @@ export function getSpaceIcon(space: Space): Image.ImageLike {
 
   const asset = toKebabCase(icon.ionicon);
 
+  /**
+   * Tinted like primary text but with reduced opacity so icons sit a step below the
+   * title. The dynamic color follows the active Raycast theme.
+   */
   return IONICONS_ASSETS.has(asset)
-    ? { source: `space-icons/${asset}.svg`, tintColor: Color.SecondaryText }
+    ? {
+        source: `space-icons/${asset}.svg`,
+        tintColor: { light: "rgb(0, 0, 0, 0.35)", dark: "rgb(255, 255, 255, 0.6)" },
+      }
     : Icon.Layers;
 }
