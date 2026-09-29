@@ -22,9 +22,9 @@ import { isLeft } from "effect/Either";
 import { ChatStatus, ResolvedChatSession } from "./types/session";
 import {
   buildSessionDeepLink,
-  openSessionFile,
   openSessionViaUriHandler,
   openWorkspaceInVSCode,
+  revealSessionFileInFinder,
 } from "./utils/session-reader";
 import { useAllSessions } from "./utils/use-all-sessions";
 
@@ -310,15 +310,16 @@ function SessionListItem({
           </ActionPanel.Section>
           <ActionPanel.Section title="Debug">
             <Action
-              title="Open Session File"
-              icon={Icon.Document}
-              shortcut={{ modifiers: ["cmd", "shift"], key: "o" }}
+              title="Reveal Session File in Finder"
+              icon={Icon.Finder}
+              shortcut={{ modifiers: ["cmd", "opt"], key: "r" }}
               onAction={async () => {
-                const result = await Effect.runPromise(Effect.either(openSessionFile(session)));
+                await closeMainWindow();
+                const result = await Effect.runPromise(Effect.either(revealSessionFileInFinder(session)));
                 if (isLeft(result)) {
                   await showToast({
                     style: Toast.Style.Failure,
-                    title: "Failed",
+                    title: "Failed to reveal in Finder",
                     message: result.left.message,
                   });
                 }

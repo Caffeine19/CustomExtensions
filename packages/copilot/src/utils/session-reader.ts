@@ -3,6 +3,8 @@ import { existsSync, readFileSync, readdirSync } from "fs";
 import { homedir } from "os";
 import { basename, join } from "path";
 
+import { showInFinder } from "@raycast/api";
+
 import dayjs from "dayjs";
 import { Effect, pipe } from "effect";
 import { sort, unique } from "radash";
@@ -410,7 +412,8 @@ export const openWorkspaceInVSCode = (session: ResolvedChatSession): Effect.Effe
   Effect.try({
     try: () => {
       const cliCommand = getCliCommand();
-      execSync(`${cliCommand} "${session.workspacePath}"`, { timeout: 5000, stdio: "ignore" });
+      // Pass the path as a single argv entry — no shell involved, so spaces/quotes/$ in the path can never break it.
+      execFileSync(cliCommand, [session.workspacePath], { timeout: 5000, stdio: "ignore" });
     },
     catch: (cause) =>
       new VSCodeLaunchError({
@@ -419,18 +422,20 @@ export const openWorkspaceInVSCode = (session: ResolvedChatSession): Effect.Effe
       }),
   });
 
-/** Open the raw .jsonl session file in the default editor. */
-export const openSessionFile = (session: ResolvedChatSession): Effect.Effect<void, VSCodeLaunchError> =>
-  Effect.try({
-    try: () => {
+/** Reveal the raw .jsonl session file in Finder. */
+// Uses Raycast's showInFinder instead of shelling out to `open`: no shell means paths with spaces, quotes or `$`
+// can never break the command, and it also works when no default app is registered for .jsonl files.
+export const revealSessionFileInFinder = (session: ResolvedChatSession): Effect.Effect<void, VSCodeLaunchError> =>
+  Effect.tryPromise({
+    try: async () => {
       if (!existsSync(session.sessionFilePath)) {
         throw new Error("Session file not found: " + session.sessionFilePath);
       }
-      execSync(`open "${session.sessionFilePath}"`, { timeout: 5000, stdio: "ignore" });
+      await showInFinder(session.sessionFilePath);
     },
     catch: (cause) =>
       new VSCodeLaunchError({
-        message: `Could not open session file: ${session.sessionFilePath}`,
+        message: `Could not reveal session file in Finder: ${session.sessionFilePath}`,
         cause,
       }),
   });

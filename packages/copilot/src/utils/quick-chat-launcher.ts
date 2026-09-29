@@ -1,4 +1,4 @@
-import { execSync } from "child_process";
+import { execFileSync, execSync } from "child_process";
 
 import { Effect } from "effect";
 
@@ -24,8 +24,8 @@ function isWorkspaceFile(params: QuickChatParams): boolean {
 }
 
 function runCli(cliCommand: string, args: string[], options?: Record<string, unknown>): void {
-  const cmd = `${cliCommand} ${args.map((a) => `"${a}"`).join(" ")}`;
-  execSync(cmd, { timeout: 5000, stdio: "ignore", ...options });
+  // Pass args as an argv array (no shell) so spaces, quotes or `$` in paths and prompts can never break the command.
+  execFileSync(cliCommand, args, { timeout: 5000, stdio: "ignore", ...options });
 }
 
 // ── Core logic ───────────────────────────────────────────────────────────────
