@@ -11,7 +11,7 @@ import {
   closeMainWindow,
 } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
-import dayjs from "dayjs";
+import dayjs, { type Dayjs } from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import updateLocale from "dayjs/plugin/updateLocale";
 import { useState, useMemo, useEffect } from "react";
@@ -51,15 +51,14 @@ dayjs.updateLocale("en", {
  * Categorize a session into a time-based group based on its last update time.
  * Used when "All Workspaces" is selected to group sessions chronologically.
  */
-function getTimeGroup(date: Date): string {
+function getTimeGroup(date: Dayjs): string {
   const now = dayjs();
-  const d = dayjs(date);
-  const diffMinutes = now.diff(d, "minute");
+  const diffMinutes = now.diff(date, "minute");
 
   if (diffMinutes < 60) return "In the Last Hour";
-  if (d.isSame(now, "day")) return "Today";
-  if (d.isSame(now.subtract(1, "day"), "day")) return "Yesterday";
-  if (now.diff(d, "day") < 7) return "Last 7 Days";
+  if (date.isSame(now, "day")) return "Today";
+  if (date.isSame(now.subtract(1, "day"), "day")) return "Yesterday";
+  if (now.diff(date, "day") < 7) return "Last 7 Days";
   return "Older";
 }
 
@@ -225,8 +224,8 @@ function SessionListItem({
   session: ResolvedChatSession;
   showWorkspace?: boolean;
 }) {
-  const relativeDate = dayjs(session.lastMessageDate).fromNow();
-  const createdDate = dayjs(session.created).format("YYYY-MM-DD HH:mm");
+  const relativeDate = session.lastMessageDate.fromNow();
+  const createdDate = session.created.format("YYYY-MM-DD HH:mm");
   const statusCfg = STATUS_CONFIG[session.chatStatus];
 
   const accessories: List.Item.Accessory[] = [];
@@ -333,7 +332,7 @@ function SessionListItem({
                   `**Session ID:** \`${session.sessionId}\``,
                   `**Workspace:** ${session.workspacePath}`,
                   `**Created:** ${createdDate}`,
-                  `**Last Activity:** ${dayjs(session.lastMessageDate).format("YYYY-MM-DD HH:mm:ss")}`,
+                  `**Last Activity:** ${session.lastMessageDate.format("YYYY-MM-DD HH:mm:ss")}`,
                   `**Status:** ${statusCfg.label}`,
                   `**Has Pending Edits:** ${session.hasPendingEdits ? "Yes" : "No"}`,
                   `**Initial Location:** ${session.initialLocation ?? "N/A"}`,

@@ -1,3 +1,5 @@
+import type { Dayjs } from "dayjs";
+
 /** Session metadata from the chat.ChatSessionStore.index in state.vscdb */
 export interface ChatSessionEntryMetadata {
   sessionId: string;
@@ -40,8 +42,8 @@ export type ChatStatus = "empty" | "in-progress" | "completed" | "failed" | "nee
 export interface ResolvedChatSession {
   sessionId: string;
   title: string;
-  created: Date;
-  lastMessageDate: Date;
+  created: Dayjs;
+  lastMessageDate: Dayjs;
   chatStatus: ChatStatus;
   hasPendingEdits: boolean;
   workspacePath: string;

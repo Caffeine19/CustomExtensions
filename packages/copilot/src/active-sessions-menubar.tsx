@@ -65,8 +65,8 @@ function SessionItem({ session, showWorkspace = false }: { session: ResolvedChat
         tintColor: showPending ? Color.Orange : statusCfg.color,
       }}
       title={truncate(session.title, 40)}
-      subtitle={showWorkspace ? session.workspaceName : dayjs(session.lastMessageDate).fromNow()}
-      tooltip={`${showPending ? "Pending Edits · " : ""}${statusCfg.label} · ${dayjs(session.lastMessageDate).fromNow()}`}
+      subtitle={showWorkspace ? session.workspaceName : session.lastMessageDate.fromNow()}
+      tooltip={`${showPending ? "Pending Edits · " : ""}${statusCfg.label} · ${session.lastMessageDate.fromNow()}`}
       onAction={async () => {
         await closeMainWindow();
         const result = await Effect.runPromise(Effect.either(openSessionViaUriHandler(session)));
@@ -89,7 +89,7 @@ export default function Command() {
 
   const nonEmpty = sessions?.filter((s) => s.chatStatus !== "empty") ?? [];
   const recentSessions = nonEmpty
-    .sort((a, b) => b.lastMessageDate.getTime() - a.lastMessageDate.getTime())
+    .sort((a, b) => b.lastMessageDate.valueOf() - a.lastMessageDate.valueOf())
     .slice(0, 20);
 
   const grouped = groupByWorkspace(recentSessions);

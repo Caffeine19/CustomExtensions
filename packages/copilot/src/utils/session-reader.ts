@@ -7,6 +7,7 @@ import { sort, unique } from "radash";
 import { ChatStatus, ChatSessionIndex, ResolvedChatSession, VSCodeVariant } from "../types/session";
 import { SessionReadError, VSCodeLaunchError } from "../types/errors";
 import { getVariant, getCliCommand, getScheme } from "./vscode";
+import dayjs from "dayjs";
 
 // ── Preferences ──────────────────────────────────────────────────────────────
 
@@ -317,8 +318,8 @@ function loadSessionsFromIndex(variant: VSCodeVariant): Effect.Effect<ResolvedCh
           sessions.push({
             sessionId: entry.sessionId,
             title: entry.title || "Untitled",
-            created: new Date(entry.timing?.created ?? entry.lastMessageDate),
-            lastMessageDate: new Date(entry.lastMessageDate),
+            created: dayjs(entry.timing?.created ?? entry.lastMessageDate),
+            lastMessageDate: dayjs(entry.lastMessageDate),
             chatStatus,
             hasPendingEdits: entry.hasPendingEdits ?? false,
             workspacePath: info.folderPath,
@@ -334,7 +335,7 @@ function loadSessionsFromIndex(variant: VSCodeVariant): Effect.Effect<ResolvedCh
       // The same session can be copied into multiple workspaces (e.g. a folder
       // later added to a multi-root workspace), so keep only the first — i.e.
       // freshest — occurrence per sessionId to avoid duplicate React keys.
-      const newestFirst = sort(sessions, (session) => session.lastMessageDate.getTime(), true);
+      const newestFirst = sort(sessions, (session) => session.lastMessageDate.valueOf(), true);
       return unique(newestFirst, (session) => session.sessionId);
     },
     catch: (cause) =>
