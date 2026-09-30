@@ -10,8 +10,8 @@ type SparkCliError = SparkNotSetupError | SparkCommandError | SparkParseError;
  * Parse output from `spark accounts`.
  *
  * Expected format (one block per account, separated by blank lines):
- *   Email Account: caffeinecat18@gmail.com "Google" (Access: read-only)
- *   Email Account: 939597201@qq.com "QQ939" (Access: read-only)
+ *   Email Account: user@example.com "Personal" (Access: read-only)
+ *   Email Account: work@example.com "Work" (Access: read-write)
  */
 const parseAccountsOutput = (output: string): SparkAccount[] => {
   const accounts: SparkAccount[] = [];
