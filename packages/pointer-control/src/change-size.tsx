@@ -1,13 +1,14 @@
 import { ActionPanel, Action, Icon, List, showToast, Toast } from "@raycast/api";
-import { execSync } from "child_process";
+import { exec } from "child_process";
 import { promisify } from "util";
+
+const promisifyExec = promisify(exec);
 
 interface PointerSizeItem {
   id: string;
   title: string;
   subtitle: string;
   size: number;
-  icon: Icon;
 }
 
 const POINTER_SIZES: PointerSizeItem[] = [
@@ -16,72 +17,62 @@ const POINTER_SIZES: PointerSizeItem[] = [
     title: "Normal",
     subtitle: "Default cursor size",
     size: 1,
-    icon: Icon.Circle,
+  },
+  {
+    id: "medium",
+    title: "Medium",
+    subtitle: "Slightly larger cursor",
+    size: 1.5,
   },
   {
     id: "large",
     title: "Large",
     subtitle: "Larger cursor size",
     size: 2,
-    icon: Icon.Plus,
   },
   {
     id: "extra-large",
     title: "Extra Large",
     subtitle: "Much larger cursor size",
     size: 3,
-    icon: Icon.PlusCircle,
   },
   {
     id: "huge",
     title: "Huge",
     subtitle: "Maximum cursor size",
     size: 4,
-    icon: Icon.PlusCircleFilled,
   },
 ];
 
-async function changePointerSizeAdvanced(size: number) {
+/**
+ * Set the macOS cursor size via the universalaccess preference, then restart
+ * `universalaccessd` so the change is reflected immediately on screen.
+ *
+ * @param size - Cursor scale factor between 1 and 4 (1 = default, 4 = maximum)
+ */
+async function setPointerSize(size: number) {
   try {
-    const appleScript = `
-tell application "System Settings"
-    activate
-    reveal anchor "AX_CURSOR_SIZE" of pane id "com.apple.Accessibility-Settings.extension" of application "System Settings"
-end tell
+    // Writing the plist alone does not refresh the visible cursor;
+    // restarting universalaccessd forces it to reload the new value.
+    await promisifyExec(`defaults write com.apple.universalaccess mouseDriverCursorSize -float ${size}`);
 
-tell application "System Events"
-    tell process "System Settings"
-        -- Wait until the slider is available
-        repeat until slider "Pointer size" of group 3 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1 exists
-            delay 0
-        end repeat
-        
-        set pointerSettings to group 3 of scroll area 1 of group 1 of group 2 of splitter group 1 of group 1 of window 1
-        set pointerSizeSlider to slider "Pointer size" of pointerSettings
-        
-        if value of pointerSizeSlider is 4 then
-            repeat until value of pointerSizeSlider is 1
-                decrement pointerSizeSlider
-            end repeat
-        else
-            repeat until value of pointerSizeSlider is 4
-                increment pointerSizeSlider
-            end repeat
-        end if
-    end tell
-end tell`;
-
-    const res = await promisify(execSync)(`osascript -e '${appleScript}'`);
-    console.log("🚀 ~ change-size.tsx:110 ~ changePointerSizeAdvanced ~ res:", res);
+    try {
+      await promisifyExec("killall universalaccessd");
+    } catch {
+      // Daemon may not be running; the setting still applies when it next starts.
+    }
 
     await showToast({
       style: Toast.Style.Success,
       title: "Pointer Size Changed",
-      message: `Cursor size set to ${size}x automatically.`,
+      message: `Cursor size set to ${size}x.`,
     });
   } catch (error) {
-    console.error("Failed to change pointer size automatically:", error);
-    // Fall back to opening settings manually
+    await showToast({
+      style: Toast.Style.Failure,
+      title: "Failed to Change Pointer Size",
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
   }
 }
 
@@ -91,17 +82,12 @@ export default function Command() {
       {POINTER_SIZES.map((item) => (
         <List.Item
           key={item.id}
-          icon={item.icon}
           title={item.title}
           subtitle={item.subtitle}
-          accessories={[{ icon: Icon.Mouse, text: `${item.size}x` }]}
+          accessories={[{ text: `${item.size}x` }]}
           actions={
             <ActionPanel>
-              <Action
-                title="Auto-Apply Size"
-                icon={Icon.Checkmark}
-                onAction={() => changePointerSizeAdvanced(item.size)}
-              />
+              <Action title="Set Cursor Size" icon={Icon.Checkmark} onAction={() => setPointerSize(item.size)} />
               <Action.CopyToClipboard title="Copy Size Value" content={item.size.toString()} />
             </ActionPanel>
           }

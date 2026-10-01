@@ -3,7 +3,7 @@
   "name": "pointer-control",
   "title": "Pointer Control",
   "description": "Control the macOS pointer size and color in Raycast.",
-  "icon": "extension-icon-v2.png",
+  "icon": "extension-icon-v3.png",
   "author": "CaffeineCat",
   "license": "MIT",
   "commands": [
