@@ -16,6 +16,8 @@ export interface RemapEntry {
   menu: string;
   /** Human-readable shortcut glyphs, e.g. "⌘⌥A" */
   shortcut: string;
+  /** Shortcut glyphs before this remap, e.g. "⌘B"; "" = none before; missing = unknown (legacy entry) */
+  originalShortcut?: string;
   /** NSUserKeyEquivalents encoded value, e.g. "@~a" */
   encoded: string;
   /** ISO timestamp of the last update */

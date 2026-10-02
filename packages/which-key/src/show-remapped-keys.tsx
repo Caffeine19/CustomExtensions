@@ -2,6 +2,7 @@ import {
   Action,
   ActionPanel,
   Alert,
+  Color,
   confirmAlert,
   getApplications,
   Icon,
@@ -89,7 +90,13 @@ export default function Command() {
               icon={iconFor(entry)}
               title={entry.breadcrumb}
               subtitle={entry.menu}
-              accessories={[{ tag: { value: entry.shortcut } }]}
+              // Pre-remap shortcut (gray) before the current one
+              accessories={[
+                ...(entry.originalShortcut !== undefined
+                  ? [{ tag: { value: entry.originalShortcut || "—", color: Color.SecondaryText } }]
+                  : []),
+                { tag: { value: entry.shortcut, color: Color.Green } },
+              ]}
               actions={
                 <ActionPanel>
                   <Action title="Run Menu Item" icon={Icon.Play} onAction={() => handleRun(entry)} />

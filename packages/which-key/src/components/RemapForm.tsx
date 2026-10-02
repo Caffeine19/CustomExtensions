@@ -29,6 +29,13 @@ function decodeEncoded(encoded: string): { combo: ModifierCombo; key: string } |
   return combo ? { combo, key: encoded.slice(combo.prefix.length) } : undefined;
 }
 
+/** Describe the current shortcut including the pre-remap value when known ("was X → now Y"). */
+function describeShortcut(entry: RemapEntry): string {
+  const now = `${entry.shortcut}  (${entry.encoded})`;
+  if (entry.originalShortcut === undefined) return now;
+  return `was ${entry.originalShortcut || "—"} → now ${now}`;
+}
+
 // ─── Form ───
 
 export default function RemapForm({ target }: { target: RemapTarget }) {
@@ -83,6 +90,8 @@ export default function RemapForm({ target }: { target: RemapTarget }) {
           breadcrumb: target.breadcrumb,
           menu: target.menu,
           shortcut: display,
+          // Capture the pre-remap shortcut on first create; keep the recorded one across edits
+          originalShortcut: existing ? existing.originalShortcut : (target.shortcut ?? ""),
           encoded,
           updatedAt: new Date().toISOString(),
         });
@@ -115,7 +124,7 @@ export default function RemapForm({ target }: { target: RemapTarget }) {
       <Form.Description title="Menu Item" text={target.breadcrumb} />
       <Form.Description
         title="Current Shortcut"
-        text={existing ? `${existing.shortcut}  (${existing.encoded})` : target.shortcut || "None"}
+        text={existing ? describeShortcut(existing) : target.shortcut || "None"}
       />
       <Form.Dropdown id="modifiers" title="Modifiers" value={combo.id} onChange={setModifierId} storeValue={false}>
         {MODIFIER_COMBOS.map((c) => (
