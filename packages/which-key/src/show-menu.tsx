@@ -18,10 +18,13 @@ import {
 import { useCachedPromise } from "@raycast/utils";
 import { useEffect, useMemo, useState } from "react";
 import fs from "fs";
-import { sleep } from "radash";
-import { fetchAllMenus, clickMenuItem } from "./utils/menuItems";
+import { fetchAllMenus } from "./utils/menuItems";
 import { matchesQuery } from "./utils/search";
 import { getKeyBindings, matchKeyBinding, formatKeySequence } from "./utils/keybindings";
+import { resolveBundleId, resolveMenuKey } from "./utils/appShortcuts";
+import { runMenuItem } from "./utils/runMenuItem";
+import RemapForm from "./components/RemapForm";
+import type { RemapTarget } from "./components/RemapForm";
 
 type Mode = "search" | "action";
 
@@ -76,6 +79,7 @@ export default function Command() {
       const app = await getFrontmostApplication();
       return {
         name: app.name,
+        bundleId: app.bundleId ?? (await resolveBundleId(app.name).catch(() => "")),
         icon: app.path ? ({ fileIcon: app.path } as Image.ImageLike) : undefined,
       };
     },
@@ -134,14 +138,20 @@ export default function Command() {
   const handleRun = async (breadcrumb: string) => {
     if (!appInfo) return;
     try {
-      await closeMainWindow({ clearRootSearch: true });
-      await sleep(150);
-      await clickMenuItem(appInfo.name, breadcrumb);
-      await popToRoot();
+      await runMenuItem(appInfo.name, breadcrumb);
     } catch (e) {
       await showToast({ style: Toast.Style.Failure, title: "Failed to run menu item", message: String(e) });
     }
   };
+
+  // Build the remap target for a menu item (menu key disambiguates duplicate leaf titles)
+  const buildRemapTarget = (breadcrumb: string, name: string, shortcut?: string): RemapTarget => ({
+    app: appName,
+    bundleId: appInfo?.bundleId ?? "",
+    breadcrumb,
+    menu: resolveMenuKey({ name, breadcrumb }, items),
+    shortcut,
+  });
 
   const handleCopyApp = async () => {
     if (!appInfo) return;
@@ -176,7 +186,12 @@ export default function Command() {
       .filter((b) => !q || b.key.toLowerCase().startsWith(q))
       .map((b) => {
         const menuItem = items.find((item) => item.breadcrumb === b.path);
-        return { ...b, shortcut: menuItem?.shortcut ?? "", displayKey: formatKeySequence(b.key) };
+        return {
+          ...b,
+          shortcut: menuItem?.shortcut ?? "",
+          displayKey: formatKeySequence(b.key),
+          menuName: menuItem?.name ?? b.path.split(" → ").pop() ?? b.path,
+        };
       })
       .sort((a, b) => a.key.localeCompare(b.key));
   }, [keyBindings, searchText, items]);
@@ -243,6 +258,12 @@ export default function Command() {
               actions={
                 <ActionPanel>
                   <Action title="Run Action" icon={Icon.Play} onAction={() => handleRun(b.path)} />
+                  <Action.Push
+                    title="Remap Key"
+                    icon={Icon.Keyboard}
+                    shortcut={{ modifiers: ["cmd", "shift"], key: "r" }}
+                    target={<RemapForm target={buildRemapTarget(b.path, b.menuName, b.shortcut)} />}
+                  />
                   <Action title="Copy App Name" icon={Icon.Clipboard} onAction={handleCopyApp} />
                   <Action
                     title="Copy Menu Path"
@@ -269,6 +290,12 @@ export default function Command() {
                 actions={
                   <ActionPanel>
                     <Action title="Run Menu Item" icon={Icon.Play} onAction={() => handleRun(item.breadcrumb)} />
+                    <Action.Push
+                      title="Remap Key"
+                      icon={Icon.Keyboard}
+                      shortcut={{ modifiers: ["cmd", "shift"], key: "r" }}
+                      target={<RemapForm target={buildRemapTarget(item.breadcrumb, item.name, item.shortcut)} />}
+                    />
                     <Action title="Copy App Name" icon={Icon.Clipboard} onAction={handleCopyApp} />
                     <Action
                       title="Copy Menu Path"

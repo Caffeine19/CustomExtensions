@@ -17,6 +17,13 @@
       "subtitle": "Which Key",
       "description": "Browse the current app's menu bar",
       "mode": "view"
+    },
+    {
+      "name": "show-remapped-keys",
+      "title": "Show Remapped Keys",
+      "subtitle": "Which Key",
+      "description": "Browse and manage shortcut remaps recorded by Which Key",
+      "mode": "view"
     }
   ],
   "dependencies": {
