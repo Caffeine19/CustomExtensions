@@ -86,7 +86,10 @@ export default function Command() {
 
   const iconFor = (entry: RemapEntry): Image.ImageLike => {
     const app = applications?.find((a) => a.bundleId === entry.bundleId);
-    return app?.path ? ({ fileIcon: app.path } as Image.ImageLike) : Icon.Document;
+    // App not installed on this machine → muted placeholder instead of the default document icon
+    return app?.path
+      ? ({ fileIcon: app.path } as Image.ImageLike)
+      : { source: Icon.Document, tintColor: Color.SecondaryText };
   };
 
   const toTarget = (entry: RemapEntry): RemapTarget => ({
