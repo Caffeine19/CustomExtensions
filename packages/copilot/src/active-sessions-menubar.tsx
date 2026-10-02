@@ -1,4 +1,15 @@
-import { Color, Icon, LaunchType, MenuBarExtra, Toast, closeMainWindow, launchCommand, showToast } from "@raycast/api";
+import {
+  Color,
+  Icon,
+  LaunchType,
+  MenuBarExtra,
+  Toast,
+  closeMainWindow,
+  getPreferenceValues,
+  launchCommand,
+  showToast,
+} from "@raycast/api";
+import { useCachedState } from "@raycast/utils";
 
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
@@ -18,7 +29,7 @@ const STATUS_CONFIG: Record<ChatStatus, { label: string; icon: Icon; color: Colo
   "in-progress": { label: "Active", icon: Icon.CircleProgress, color: Color.Blue },
   completed: { label: "Done", icon: Icon.CheckCircle, color: Color.Green },
   failed: { label: "Fail", icon: Icon.ExclamationMark, color: Color.Red },
-  "needs-input": { label: "Input", icon: Icon.QuestionMark, color: Color.Yellow },
+  "needs-input": { label: "Waiting", icon: Icon.QuestionMark, color: Color.Yellow },
   archived: { label: "Archived", icon: Icon.Tray, color: Color.Blue },
 };
 
@@ -39,17 +50,32 @@ function groupByWorkspace(sessions: ResolvedChatSession[]): Map<string, Resolved
   return groups;
 }
 
-function menubarTitle(activeSessions: ResolvedChatSession[], pendingCount: number, errorCount: number): string {
+/** Menu bar title display mode (`menubarDisplayMode` preference) */
+type MenubarDisplayMode = "detailed" | "compact";
+
+function menubarTitle(
+  activeSessions: ResolvedChatSession[],
+  waitingCount: number,
+  pendingCount: number,
+  errorCount: number,
+  mode: MenubarDisplayMode,
+): string {
   const activeCount = activeSessions.filter((s) => s.chatStatus === "in-progress").length;
-  if (activeCount === 0 && pendingCount === 0 && errorCount === 0) return "None";
+
+  // Compact mode: a single total number (e.g. "5" instead of "1 Waiting / 3 Active / 1 Pending")
+  if (mode === "compact") return String(waitingCount + activeCount + pendingCount + errorCount);
+
+  if (waitingCount === 0 && activeCount === 0 && pendingCount === 0 && errorCount === 0) return "None";
 
   const counts = {
+    waiting: waitingCount,
     active: activeCount,
     pending: pendingCount,
     error: errorCount,
   };
 
   const parts: string[] = [];
+  if (counts.waiting > 0) parts.push(`${counts.waiting} Waiting`);
   if (counts.active > 0) parts.push(`${counts.active} Active`);
   if (counts.pending > 0) parts.push(`${counts.pending} Pending`);
   if (counts.error > 0) parts.push(`${counts.error} Error`);
@@ -88,6 +114,10 @@ function SessionItem({ session, showWorkspace = false }: { session: ResolvedChat
 
 export default function Command() {
   const { sessions, isLoading, revalidate } = useAllSessions();
+  const { menubarDisplayMode } = getPreferenceValues();
+  // Runtime override toggled from the menu bar footer; falls back to the preference value
+  const [modeOverride, setModeOverride] = useCachedState<MenubarDisplayMode | null>("menubarModeOverride", null);
+  const displayMode: MenubarDisplayMode = modeOverride ?? menubarDisplayMode;
 
   const nonEmpty = sessions?.filter((s) => s.chatStatus !== "empty") ?? [];
   const recentSessions = nonEmpty
@@ -98,16 +128,32 @@ export default function Command() {
 
   // Use recentSessions as the base for Active section to keep time dimension consistent
   const activeRecentSessions = recentSessions.filter(isActive);
+  const waitingSessions = activeRecentSessions.filter((s) => s.chatStatus === "needs-input");
   const pendingCount = recentSessions.filter((s) => s.hasPendingEdits && !isActive(s)).length;
   const errorSessions = activeRecentSessions.filter((s) => s.chatStatus === "failed");
 
   return (
     <MenuBarExtra
       icon="github-copilot-dark.svg"
-      title={menubarTitle(activeRecentSessions, pendingCount, errorSessions.length)}
+      title={menubarTitle(
+        activeRecentSessions,
+        waitingSessions.length,
+        pendingCount,
+        errorSessions.length,
+        displayMode,
+      )}
       tooltip="VS Code Copilot Sessions"
       isLoading={isLoading}
     >
+      {/* Sessions waiting for the user's reply (question / confirmation) */}
+      {waitingSessions.length > 0 && (
+        <MenuBarExtra.Section title={`Needs Your Input (${waitingSessions.length})`}>
+          {waitingSessions.map((session) => (
+            <SessionItem key={session.sessionId} session={session} showWorkspace />
+          ))}
+        </MenuBarExtra.Section>
+      )}
+
       {/* Active sessions */}
       {activeRecentSessions.filter((s) => s.chatStatus === "in-progress").length > 0 && (
         <MenuBarExtra.Section
@@ -142,6 +188,11 @@ export default function Command() {
       {/* Footer actions */}
       <MenuBarExtra.Section>
         <MenuBarExtra.Item icon={Icon.RotateClockwise} title="Refresh" onAction={revalidate} />
+        <MenuBarExtra.Item
+          icon={Icon.Switch}
+          title={displayMode === "compact" ? "Switch to Detailed Mode" : "Switch to Compact Mode"}
+          onAction={() => setModeOverride(displayMode === "compact" ? "detailed" : "compact")}
+        />
         <MenuBarExtra.Item
           icon={Icon.ArrowsExpand}
           title="Open Full List"

@@ -52,6 +52,24 @@
           "value": "stable"
         }
       ]
+    },
+    {
+      "name": "menubarDisplayMode",
+      "title": "Menu Bar Display Mode",
+      "description": "Detailed status counts or a compact total number.",
+      "type": "dropdown",
+      "required": false,
+      "default": "detailed",
+      "data": [
+        {
+          "title": "Detailed",
+          "value": "detailed"
+        },
+        {
+          "title": "Compact",
+          "value": "compact"
+        }
+      ]
     }
   ],
   "dependencies": {
