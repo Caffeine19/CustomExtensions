@@ -94,9 +94,20 @@ export async function readKeyEquivalents(bundleId: string): Promise<Record<strin
     const parsed = JSON.parse(json) as unknown;
     return typeof parsed === "object" && parsed !== null ? (parsed as Record<string, string>) : {};
   } catch (e) {
-    // "does not exist" = domain or key missing → nothing written yet; anything else = unreadable
-    return (e as Error).message.includes("does not exist") ? {} : undefined;
+    // Missing domain/key = nothing written yet; anything else = unreadable (needs Full Disk Access)
+    return isMissingKeyError((e as Error).message) ? {} : undefined;
   }
+}
+
+/**
+ * Whether a `defaults read` failure means "no value stored" rather than "cannot read".
+ * The wording varies by macOS version:
+ * - older: "The domain/default pair of (com.x, NSUserKeyEquivalents) does not exist"
+ * - newer: "Domain 'com.x' not found."
+ * - key absent in an existing domain: "Could not find key 'NSUserKeyEquivalents' in domain 'com.x'."
+ */
+export function isMissingKeyError(message: string): boolean {
+  return /does not exist|not found|could not find key/i.test(message);
 }
 
 /** Compare a ledger entry against the value currently written to the app's defaults domain. */

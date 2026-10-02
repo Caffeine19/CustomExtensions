@@ -37,6 +37,7 @@ func glyphName(_ glyph: Int) -> String? {
 /// Map virtual key codes to readable key names (for when glyph is 0)
 func vkeyName(_ vkey: Int) -> String? {
     switch vkey {
+    case 49:  return "Space" // kVK_Space
     case 123: return "\u{2190}" // ← Left Arrow
     case 124: return "\u{2192}" // → Right Arrow
     case 125: return "\u{2193}" // ↓ Down Arrow
@@ -71,6 +72,8 @@ func vkeyName(_ vkey: Int) -> String? {
 func resolveKey(_ cmdChar: String?, _ cmdGlyph: Int, _ cmdVKey: Int) -> String {
     // 1. If we have a printable character, use it
     if let ch = cmdChar, !ch.isEmpty {
+        // Space comes through as " " — name it, otherwise the shortcut renders as a lone modifier
+        if ch == " " { return "Space" }
         if ch.unicodeScalars.allSatisfy({ $0.value >= 0x20 && $0.value < 0x7F }) {
             return ch
         }
