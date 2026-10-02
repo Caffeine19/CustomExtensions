@@ -112,7 +112,7 @@ export default function Command() {
       LocalStorage.setItem("which-key-mode", "search");
       return;
     }
-    if (mode === "search" && text === ":") {
+    if (mode === "search" && (text === ":" || text === ";")) {
       setMode("action");
       setSearchText("");
       LocalStorage.setItem("which-key-mode", "action");
