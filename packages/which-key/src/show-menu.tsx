@@ -102,6 +102,7 @@ export default function Command() {
   }
 
   const items = menuData ?? [];
+  const appName = appInfo?.name ?? "";
   const keyBindings = appInfo ? getKeyBindings(appInfo.name) : [];
 
   // Vim-style mode switching: "/" → search, ":" → action
@@ -180,14 +181,22 @@ export default function Command() {
       .sort((a, b) => a.key.localeCompare(b.key));
   }, [keyBindings, searchText, items]);
 
-  // ─── Search mode items ───
-  const searchItems = useMemo(() => {
-    if (!searchText.trim()) return items;
-    return items.filter((item) => matchesQuery(item, searchText));
-  }, [items, searchText]);
+  // ─── Search mode items: grouped by first-level parent menu ───
+  const searchGroups = useMemo(() => {
+    const filtered = searchText.trim() ? items.filter((item) => matchesQuery(item, searchText)) : items;
+    const groups = new Map<string, typeof items>();
+    for (const item of filtered) {
+      // Breadcrumb: "App → TopLevel → …", direct children belong to the app menu itself
+      const segments = item.breadcrumb.split(" → ");
+      const parent = segments.length > 2 ? segments[1] : appName;
+      const group = groups.get(parent);
+      if (group) group.push(item);
+      else groups.set(parent, [item]);
+    }
+    return Array.from(groups, ([title, groupItems]) => ({ title, items: groupItems }));
+  }, [items, searchText, appName]);
 
   const isLoading = isLoadingApp || isLoadingMenus;
-  const appName = appInfo?.name ?? "";
 
   return (
     <List
@@ -217,7 +226,7 @@ export default function Command() {
         <List.EmptyView
           title="No Keybindings"
           description={`No keybindings configured for ${appName} yet.\nUse "Copy App Name" and "Copy Menu Path" actions to help configure.`}
-          icon={Icon.Warning}
+          icon={Icon.BlankDocument}
         />
       )}
 
@@ -248,36 +257,37 @@ export default function Command() {
       )}
 
       {/* ─── Search mode ─── */}
-      {mode === "search" && (
-        <List.Section title={`${appName} — Menu Bar`}>
-          {searchItems.map((item) => (
-            <List.Item
-              key={item.key}
-              icon={appInfo?.icon ?? Icon.Document}
-              title={item.breadcrumb}
-              accessories={[...(item.shortcut ? [{ tag: item.shortcut }] : [])]}
-              actions={
-                <ActionPanel>
-                  <Action title="Run Menu Item" icon={Icon.Play} onAction={() => handleRun(item.breadcrumb)} />
-                  <Action title="Copy App Name" icon={Icon.Clipboard} onAction={handleCopyApp} />
-                  <Action
-                    title="Copy Menu Path"
-                    icon={Icon.CopyClipboard}
-                    onAction={() => handleCopyMenuPath(item.breadcrumb)}
-                  />
-                  {item.shortcut && <Action.CopyToClipboard title="Copy Shortcut" content={item.shortcut} />}
-                  <Action.Push
-                    title="Export Menu Items (JSON)"
-                    icon={Icon.Download}
-                    shortcut={{ modifiers: ["cmd", "shift"], key: "e" }}
-                    target={<ExportForm onExport={handleExport} />}
-                  />
-                </ActionPanel>
-              }
-            />
-          ))}
-        </List.Section>
-      )}
+      {mode === "search" &&
+        searchGroups.map((group) => (
+          <List.Section key={group.title} title={group.title}>
+            {group.items.map((item) => (
+              <List.Item
+                key={item.key}
+                icon={appInfo?.icon ?? Icon.Document}
+                title={item.breadcrumb}
+                accessories={[...(item.shortcut ? [{ tag: item.shortcut }] : [])]}
+                actions={
+                  <ActionPanel>
+                    <Action title="Run Menu Item" icon={Icon.Play} onAction={() => handleRun(item.breadcrumb)} />
+                    <Action title="Copy App Name" icon={Icon.Clipboard} onAction={handleCopyApp} />
+                    <Action
+                      title="Copy Menu Path"
+                      icon={Icon.CopyClipboard}
+                      onAction={() => handleCopyMenuPath(item.breadcrumb)}
+                    />
+                    {item.shortcut && <Action.CopyToClipboard title="Copy Shortcut" content={item.shortcut} />}
+                    <Action.Push
+                      title="Export Menu Items (JSON)"
+                      icon={Icon.Download}
+                      shortcut={{ modifiers: ["cmd", "shift"], key: "e" }}
+                      target={<ExportForm onExport={handleExport} />}
+                    />
+                  </ActionPanel>
+                }
+              />
+            ))}
+          </List.Section>
+        ))}
     </List>
   );
 }
