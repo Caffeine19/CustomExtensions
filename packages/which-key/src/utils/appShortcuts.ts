@@ -78,21 +78,49 @@ export async function applyKeyEquivalent(bundleId: string, menu: string, encoded
   }
 }
 
+// ─── Status check (ledger entry vs what is actually written) ───
+
+/** How a ledger entry compares to the value currently written in the app's defaults domain. */
+export type ShortcutStatus = "applied" | "not-applied" | "mismatch" | "unknown";
+
+/** Read the NSUserKeyEquivalents dict for a bundle id; undefined = unreadable (e.g. no Full Disk Access). */
+export async function readKeyEquivalents(bundleId: string): Promise<Record<string, string> | undefined> {
+  try {
+    // Read ONLY this key and convert via plutil: exporting the whole domain to JSON
+    // fails when the domain contains <data> values (JSON plists cannot represent them,
+    // e.g. Edge's NSOSPLastRootDirectory → "invalid object in plist for destination format")
+    const raw = await run("defaults", ["read", bundleId, "NSUserKeyEquivalents"]);
+    const json = await run("plutil", ["-convert", "json", "-o", "-", "-"], raw);
+    const parsed = JSON.parse(json) as unknown;
+    return typeof parsed === "object" && parsed !== null ? (parsed as Record<string, string>) : {};
+  } catch (e) {
+    // "does not exist" = domain or key missing → nothing written yet; anything else = unreadable
+    return (e as Error).message.includes("does not exist") ? {} : undefined;
+  }
+}
+
+/** Compare a ledger entry against the value currently written to the app's defaults domain. */
+export function checkStatus(
+  entry: { menu: string; encoded: string },
+  dict: Record<string, string> | undefined,
+): ShortcutStatus {
+  if (!dict) return "unknown";
+  const actual = dict[entry.menu];
+  if (actual === undefined) return "not-applied";
+  return actual === entry.encoded ? "applied" : "mismatch";
+}
+
 /** Remove one NSUserKeyEquivalents entry, preserving the user's other App Shortcuts. */
 export async function removeKeyEquivalent(bundleId: string, menu: string): Promise<void> {
-  let xml: string;
-  try {
-    // Read the whole domain as JSON so a single entry can be dropped safely
-    xml = await run("defaults", ["export", bundleId, "-"]);
-  } catch {
-    return; // domain does not exist → nothing to clear
+  // Read the current state so a single entry can be dropped safely
+  const dict = await readKeyEquivalents(bundleId);
+  if (!dict) {
+    // Unreadable (permissions) — fail loudly instead of silently leaving a stale system entry
+    throw new Error(withGuidance(`Failed to read App Shortcuts for ${bundleId}`));
   }
+  if (!(menu in dict)) return; // entry already gone
+  delete dict[menu];
   try {
-    const json = await run("plutil", ["-convert", "json", "-", "-o", "-"], xml);
-    const domain = JSON.parse(json) as Record<string, unknown>;
-    const dict = domain.NSUserKeyEquivalents as Record<string, string> | undefined;
-    if (!dict || !(menu in dict)) return; // entry already gone
-    delete dict[menu];
     if (Object.keys(dict).length === 0) {
       await run("defaults", ["delete", bundleId, "NSUserKeyEquivalents"]);
       return;
@@ -142,5 +170,26 @@ export async function promptRestart(appName: string): Promise<void> {
     await restartApp(appName);
   } catch (e) {
     await showToast({ style: Toast.Style.Failure, title: `Failed to restart ${appName}`, message: String(e) });
+  }
+}
+
+/** Ask whether to restart the given apps now (single dialog for multiple apps); restarts on confirm. */
+export async function promptRestartApps(appNames: string[]): Promise<void> {
+  const unique = [...new Set(appNames)];
+  if (unique.length === 0) return;
+  if (unique.length === 1) return promptRestart(unique[0]);
+  const shouldRestart = await confirmAlert({
+    title: `Restart ${unique.length} apps?`,
+    message: `Shortcut changes take effect after these apps restart:\n${unique.join(", ")}\nUnsaved work may be lost.`,
+    primaryAction: { title: "Restart Apps" },
+    dismissAction: { title: "Later" },
+  });
+  if (!shouldRestart) return;
+  const failed: string[] = [];
+  for (const appName of unique) {
+    await restartApp(appName).catch(() => failed.push(appName));
+  }
+  if (failed.length) {
+    await showToast({ style: Toast.Style.Failure, title: "Failed to restart some apps", message: failed.join(", ") });
   }
 }
