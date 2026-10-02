@@ -1,5 +1,5 @@
 import { execFileSync, execSync, spawn } from "child_process";
-import { existsSync, readFileSync, readdirSync } from "fs";
+import { closeSync, existsSync, fstatSync, openSync, readFileSync, readSync, readdirSync, statSync } from "fs";
 import { homedir } from "os";
 import { basename, join } from "path";
 
@@ -227,7 +227,9 @@ const IN_PROGRESS_TIMING_THRESHOLD_MS = 1000;
  *
  * IMPORTANT: chatSessionStore.ts `getSessionMetadata` explicitly converts Pending (0) and NeedsInput (4) → Cancelled
  * (2) before persisting. So `lastResponseState=2` means either "user stopped" OR "was in-progress when VS Code
- * serialized". Timing is the only way to tell them apart.
+ * serialized". Timing is the only way to tell them apart. The same collapse hides sessions that are waiting for the
+ * user to answer a question or confirm an action — those also look "in-progress" here and are refined from the session
+ * JSONL op log by `isWaitingForInput` below.
  *
  * ResponseModelState (stored as lastResponseState number): 0 = Pending, 1 = Complete, 2 = Cancelled, 3 = Failed, 4 =
  * NeedsInput
@@ -272,6 +274,164 @@ function deriveChatStatus(
   return "completed";
 }
 
+// ── Waiting-for-input detection (session JSONL op log) ──────────────────────
+
+// A session that is waiting for the user to answer a question (askQuestions carousel), confirm
+// an action or fill an elicitation is invisible in the chat.ChatSessionStore.index:
+// getSessionMetadataSync collapses ResponseModelState.NeedsInput (4) to Cancelled (2) before
+// persisting, and a waiting response never gets `completedAt`, so its timing always matches the
+// in-progress heuristic. The session's JSONL op log keeps the real per-request `modelState`.
+//
+// JSONL format (objectMutationLog.ts EntryKind), one JSON entry per line:
+//   kind 0 — Initial: full snapshot; `v.requests` holds the request array (records carry `modelState`)
+//   kind 1 — Set: replace the value at path `k`, e.g. ["requests", 3, "modelState"]
+//   kind 2 — Push: append `v` items to the array at `k`; when `i` is set the array is first
+//            truncated at `i` (splice-replace)
+//   kind 3 — Delete: drop the value at `k`
+//
+// Only request-array and modelState lines can change what we care about, so the huge
+// response-part lines (hundreds of KB each) are skipped with substring checks before JSON.parse.
+
+/** ResponseModelState.NeedsInput — awaiting user interaction (question, confirmation, elicitation). */
+const RESPONSE_MODEL_STATE_NEEDS_INPUT = 4;
+
+// Session files grow without bound (200 MB+ for long sessions), so exact replay is capped by a
+// read budget; larger files fall back to a tail scan of their most recent ops.
+const FULL_REPLAY_MAX_BYTES = 24 * 1024 * 1024;
+const TAIL_SCAN_BYTES = 256 * 1024;
+
+interface SessionOpLogEntry {
+  kind: number;
+  k?: (string | number)[];
+  v?: unknown;
+  i?: number;
+}
+
+/** Replay of the `requests` array: index → last known `modelState.value`, plus bookkeeping. */
+interface RequestStateReplay {
+  count: number;
+  states: Map<number, number | undefined>;
+  /** Most recent modelState written anywhere — used when indices cannot be trusted (tail scan). */
+  lastWrittenValue: number | undefined;
+}
+
+function recordModelStateWrite(replay: RequestStateReplay, index: number, modelState: unknown): void {
+  const rawValue = (modelState as { value?: unknown } | null | undefined)?.value;
+  const value = typeof rawValue === "number" ? rawValue : undefined;
+  replay.states.set(index, value);
+  replay.lastWrittenValue = value;
+}
+
+function applyOp(replay: RequestStateReplay, entry: SessionOpLogEntry): void {
+  if (entry.kind === 0) {
+    // Initial snapshot — the request array becomes the replay baseline.
+    const requests = (entry.v as { requests?: unknown[] } | null | undefined)?.requests;
+    if (!Array.isArray(requests)) return;
+    replay.count = requests.length;
+    replay.states.clear();
+    for (const [index, request] of requests.entries()) {
+      const modelState = (request as { modelState?: unknown } | null | undefined)?.modelState;
+      if (modelState !== undefined) recordModelStateWrite(replay, index, modelState);
+    }
+    return;
+  }
+
+  const path = entry.k;
+  if (!Array.isArray(path) || path[0] !== "requests") return;
+
+  if (entry.kind === 2) {
+    // Push onto the `requests` array; `i` means "truncate at i, then append" (splice-replace).
+    const items = Array.isArray(entry.v) ? entry.v : [];
+    const spliceIndex = typeof entry.i === "number" ? entry.i : replay.count;
+    for (const index of [...replay.states.keys()]) {
+      if (index >= spliceIndex) replay.states.delete(index);
+    }
+    replay.count = spliceIndex + items.length;
+    for (const [offset, item] of items.entries()) {
+      const modelState = (item as { modelState?: unknown } | null | undefined)?.modelState;
+      if (modelState !== undefined) recordModelStateWrite(replay, spliceIndex + offset, modelState);
+    }
+    return;
+  }
+
+  const index = path[1];
+  if (typeof index !== "number") return;
+  if (path.length === 3 && path[2] === "modelState") {
+    if (entry.kind === 1) recordModelStateWrite(replay, index, entry.v);
+    else if (entry.kind === 3) replay.states.delete(index);
+  } else if (path.length === 2 && entry.kind === 1) {
+    // A whole-record Set still carries the request's current modelState.
+    const modelState = (entry.v as { modelState?: unknown } | null | undefined)?.modelState;
+    if (modelState !== undefined) recordModelStateWrite(replay, index, modelState);
+  }
+}
+
+/** Cheap pre-filter: only lines that can affect request model states get parsed. */
+function parseOpLogEntry(raw: string): SessionOpLogEntry | undefined {
+  if (!raw.startsWith('{"kind":0') && !raw.includes('"k":["requests"]') && !raw.includes('"modelState"')) {
+    return undefined;
+  }
+  try {
+    const entry = JSON.parse(raw) as SessionOpLogEntry | undefined;
+    return typeof entry?.kind === "number" ? entry : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Full read, unless the file exceeds the replay budget (returns undefined then). */
+function readAllLines(path: string): string[] | undefined {
+  if (statSync(path).size > FULL_REPLAY_MAX_BYTES) return undefined;
+  return readFileSync(path, "utf-8").split("\n");
+}
+
+/** Last {@link TAIL_SCAN_BYTES} of the file as lines, minus the leading partial line. */
+function readTailLines(path: string): string[] {
+  const fd = openSync(path, "r");
+  try {
+    const { size } = fstatSync(fd);
+    const length = Math.min(TAIL_SCAN_BYTES, size);
+    const buffer = Buffer.allocUnsafe(length);
+    readSync(fd, buffer, 0, length, size - length);
+    const lines = buffer.toString("utf-8").split("\n");
+    if (size > length) lines.shift(); // first line is likely cut mid-entry
+    return lines;
+  } finally {
+    closeSync(fd);
+  }
+}
+
+/**
+ * Whether the session has a request awaiting the user (question carousel, tool confirmation or elicitation) — VS Code's
+ * `ResponseModelState.NeedsInput`.
+ *
+ * Only "in-progress"-looking sessions need this check: a waiting response has no `completedAt`, so its timing always
+ * matches the in-progress heuristic. Falls back to `false` for unreadable or oversized files, keeping the timing-based
+ * status.
+ */
+function isWaitingForInput(sessionFilePath: string): boolean {
+  try {
+    if (!existsSync(sessionFilePath)) return false;
+
+    const allLines = readAllLines(sessionFilePath);
+    const replay: RequestStateReplay = { count: 0, states: new Map(), lastWrittenValue: undefined };
+    for (const raw of allLines ?? readTailLines(sessionFilePath)) {
+      const entry = parseOpLogEntry(raw);
+      if (entry) applyOp(replay, entry);
+    }
+
+    if (allLines) {
+      // Exact replay: any request whose latest modelState is NeedsInput means an unanswered prompt.
+      return [...replay.states.values()].some((value) => value === RESPONSE_MODEL_STATE_NEEDS_INPUT);
+    }
+    // Tail scan: mid-file indices cannot be attributed to requests, but the latest modelState write is a faithful
+    // proxy — a waiting session has no newer activity.
+    return replay.lastWrittenValue === RESPONSE_MODEL_STATE_NEEDS_INPUT;
+  } catch {
+    return false;
+  }
+}
+
 // ── Load all sessions ────────────────────────────────────────────────────────
 
 function loadSessionsFromIndex(variant: VSCodeVariant): Effect.Effect<ResolvedChatSession[], SessionReadError> {
@@ -308,12 +468,18 @@ function loadSessionsFromIndex(variant: VSCodeVariant): Effect.Effect<ResolvedCh
           // cannot be opened through the `vscode-chat-session://local/` deep link.
           if (entry.isExternal) continue;
 
-          const chatStatus = deriveChatStatus(
+          const sessionFilePath = join(wsDir, "chatSessions", `${entry.sessionId}.jsonl`);
+          let chatStatus = deriveChatStatus(
             entry.isEmpty,
             entry.timing?.lastRequestStarted,
             entry.timing?.lastRequestEnded,
             entry.lastResponseState,
           );
+          // A session waiting for the user to answer/confirm is indistinguishable from a running one in the index
+          // (see deriveChatStatus), so refine those candidates against the session's JSONL op log.
+          if (chatStatus === "in-progress" && isWaitingForInput(sessionFilePath)) {
+            chatStatus = "needs-input";
+          }
 
           sessions.push({
             sessionId: entry.sessionId,
@@ -325,7 +491,7 @@ function loadSessionsFromIndex(variant: VSCodeVariant): Effect.Effect<ResolvedCh
             workspacePath: info.folderPath,
             workspaceName: info.folderName,
             workspaceHash: info.hash,
-            sessionFilePath: join(wsDir, "chatSessions", `${entry.sessionId}.jsonl`),
+            sessionFilePath,
             initialLocation: entry.initialLocation,
             lastResponseState: entry.lastResponseState,
           });

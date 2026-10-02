@@ -88,8 +88,8 @@ const STATUS_CONFIG: Record<ChatStatus, { label: string; icon: Icon; color: Colo
     color: Color.Red,
   },
   "needs-input": {
-    label: "Input",
-    icon: Icon.QuestionMark,
+    label: "Waiting",
+    icon: Icon.Info,
     color: Color.Yellow,
   },
   archived: {
@@ -160,17 +160,27 @@ export default function Command() {
     return filtered;
   }, [sessions, searchText, selectedWorkspace]);
 
+  // Sessions waiting for the user's reply are the most actionable — pin them above the time/workspace groups.
+  const waitingSessions = useMemo(
+    () => filteredSessions.filter((s) => s.chatStatus === "needs-input"),
+    [filteredSessions],
+  );
+  const otherSessions = useMemo(
+    () => filteredSessions.filter((s) => s.chatStatus !== "needs-input"),
+    [filteredSessions],
+  );
+
   // Group sessions by time period when showing all workspaces,
   // or by workspace when a specific workspace is selected
   const grouped = useMemo(() => {
     const groups = new Map<string, ResolvedChatSession[]>();
-    for (const session of filteredSessions) {
+    for (const session of otherSessions) {
       const key = selectedWorkspace === "__all__" ? getTimeGroup(session.lastMessageDate) : session.workspaceName;
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(session);
     }
     return groups;
-  }, [filteredSessions, selectedWorkspace]);
+  }, [otherSessions, selectedWorkspace]);
 
   return (
     <List
@@ -200,20 +210,38 @@ export default function Command() {
           title="No Chat Sessions Found"
           description="No local VS Code Copilot chat sessions were found on this machine."
         />
-      ) : selectedWorkspace !== "__all__" ? (
-        // Flat list when a specific workspace is selected
-        filteredSessions.map((session) => (
-          <SessionListItem key={session.sessionId} session={session} showWorkspace={false} />
-        ))
       ) : (
-        // Grouped by time period when showing all workspaces
-        TIME_GROUP_ORDER.filter((g) => grouped.has(g)).map((groupName) => (
-          <List.Section key={groupName} title={groupName} subtitle={`${grouped.get(groupName)!.length} session(s)`}>
-            {grouped.get(groupName)!.map((session) => (
-              <SessionListItem key={session.sessionId} session={session} showWorkspace={true} />
-            ))}
-          </List.Section>
-        ))
+        <>
+          {/* Sessions waiting for the user's reply — pinned above everything else */}
+          {waitingSessions.length > 0 && (
+            <List.Section title="Needs Your Input" subtitle={`${waitingSessions.length} session(s)`}>
+              {waitingSessions.map((session) => (
+                <SessionListItem
+                  key={session.sessionId}
+                  session={session}
+                  showWorkspace={selectedWorkspace === "__all__"}
+                />
+              ))}
+            </List.Section>
+          )}
+          {selectedWorkspace !== "__all__"
+            ? // Flat list when a specific workspace is selected
+              otherSessions.map((session) => (
+                <SessionListItem key={session.sessionId} session={session} showWorkspace={false} />
+              ))
+            : // Grouped by time period when showing all workspaces
+              TIME_GROUP_ORDER.filter((g) => grouped.has(g)).map((groupName) => (
+                <List.Section
+                  key={groupName}
+                  title={groupName}
+                  subtitle={`${grouped.get(groupName)!.length} session(s)`}
+                >
+                  {grouped.get(groupName)!.map((session) => (
+                    <SessionListItem key={session.sessionId} session={session} showWorkspace={true} />
+                  ))}
+                </List.Section>
+              ))}
+        </>
       )}
     </List>
   );

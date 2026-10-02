@@ -35,6 +35,9 @@ export interface ChatSessionIndex {
  * - Failed → "failed"
  * - NeedsInput → "needs-input"
  *
+ * Note: the session index persists NeedsInput as Cancelled, so "needs-input" is normally derived from the session JSONL
+ * op log (`isWaitingForInput` in utils/session-reader), where the real per-request state survives.
+ *
  * "empty" is a local-only status for sessions with no messages.
  */
 export type ChatStatus = "empty" | "in-progress" | "completed" | "failed" | "needs-input" | "archived";

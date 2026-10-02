@@ -29,7 +29,7 @@ const STATUS_CONFIG: Record<ChatStatus, { label: string; icon: Icon; color: Colo
   "in-progress": { label: "Active", icon: Icon.CircleProgress, color: Color.Blue },
   completed: { label: "Done", icon: Icon.CheckCircle, color: Color.Green },
   failed: { label: "Fail", icon: Icon.ExclamationMark, color: Color.Red },
-  "needs-input": { label: "Waiting", icon: Icon.QuestionMark, color: Color.Yellow },
+  "needs-input": { label: "Waiting", icon: Icon.Info, color: Color.Yellow },
   archived: { label: "Archived", icon: Icon.Tray, color: Color.Blue },
 };
 
