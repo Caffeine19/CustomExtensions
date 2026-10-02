@@ -59,13 +59,13 @@ export async function resolveBundleId(appName: string): Promise<string> {
 
 /**
  * Resolve the NSUserKeyEquivalents key for a menu item: the exact leaf title,
- * or a "TopLevel > … > Leaf" path when the leaf title appears more than once in the app.
+ * or an ESC-separated path ("\eTop\eLeaf") when the leaf title appears more than once in the app.
  */
 export function resolveMenuKey(item: { name: string; breadcrumb: string }, allItems: { name: string }[]): string {
   const duplicated = allItems.filter((i) => i.name === item.name).length > 1;
   if (!duplicated) return item.name;
-  // Breadcrumb: "App → TopLevel → … → Leaf" — the defaults path excludes the app name
-  return item.breadcrumb.split(" → ").slice(1).join(" > ");
+  // Hierarchical keys are a leading ESC + ESC-separated titles; breadcrumb has no app prefix
+  return "\u001b" + item.breadcrumb.split(" → ").join("\u001b");
 }
 
 /** Apply a menu shortcut override via the app's NSUserKeyEquivalents defaults domain. */

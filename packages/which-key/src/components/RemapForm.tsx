@@ -39,7 +39,7 @@ export default function RemapForm({ target }: { target: RemapTarget }) {
   // Prefill from the persisted remap (if any)
   useEffect(() => {
     (async () => {
-      const found = findRemap(await loadRemaps(), target.bundleId, target.breadcrumb);
+      const found = findRemap(await loadRemaps(), target.bundleId, target.menu);
       if (!found) return;
       setExisting(found);
       const decoded = decodeEncoded(found.encoded);
@@ -66,7 +66,7 @@ export default function RemapForm({ target }: { target: RemapTarget }) {
       if (isClear) {
         // Clear = remove the system override AND the ledger entry
         await removeKeyEquivalent(target.bundleId, target.menu);
-        await removeRemap(target.bundleId, target.breadcrumb);
+        await removeRemap(target.bundleId, target.menu);
         await showToast({ style: Toast.Style.Success, title: "Shortcut cleared", message: target.breadcrumb });
       } else {
         const keyChar = key.trim().toLowerCase();

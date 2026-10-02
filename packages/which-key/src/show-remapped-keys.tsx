@@ -69,7 +69,7 @@ export default function Command() {
     try {
       // Clear = remove the system override AND the ledger entry
       await removeKeyEquivalent(entry.bundleId, entry.menu);
-      await removeRemap(entry.bundleId, entry.breadcrumb);
+      await removeRemap(entry.bundleId, entry.menu);
       await showToast({ style: Toast.Style.Success, title: "Shortcut cleared", message: entry.breadcrumb });
       revalidate();
     } catch (e) {
@@ -85,7 +85,7 @@ export default function Command() {
         <List.Section key={group.title} title={group.title}>
           {group.items.map((entry) => (
             <List.Item
-              key={`${entry.bundleId}-${entry.breadcrumb}`}
+              key={`${entry.bundleId}-${entry.menu}`}
               icon={iconFor(entry)}
               title={entry.breadcrumb}
               subtitle={entry.menu}

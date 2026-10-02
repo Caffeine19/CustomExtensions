@@ -10,9 +10,9 @@ export interface RemapEntry {
   app: string;
   /** Target application bundle id (also the `defaults` domain), e.g. "cc.ffitch.shottr" */
   bundleId: string;
-  /** Full menu breadcrumb, e.g. "Shottr → Tools → Pin to Screen" */
+  /** Full menu breadcrumb without app prefix, e.g. "File → Save As…" */
   breadcrumb: string;
-  /** NSUserKeyEquivalents dictionary key: exact leaf title, or "TopLevel > … > Leaf" when duplicated */
+  /** NSUserKeyEquivalents dictionary key: exact leaf title, or a "\eTop\eLeaf" ESC-separated path when duplicated */
   menu: string;
   /** Human-readable shortcut glyphs, e.g. "⌘⌥A" */
   shortcut: string;
@@ -45,24 +45,24 @@ export async function saveRemaps(remaps: RemapEntry[]): Promise<void> {
   await fs.promises.writeFile(REMAP_FILE, JSON.stringify(remaps, null, 2), "utf-8");
 }
 
-/** Find an existing remap for the given app + menu item. */
-export function findRemap(remaps: RemapEntry[], bundleId: string, breadcrumb: string): RemapEntry | undefined {
-  return remaps.find((r) => r.bundleId === bundleId && r.breadcrumb === breadcrumb);
+/** Find an existing remap for the given app + menu key (the exact NSUserKeyEquivalents key). */
+export function findRemap(remaps: RemapEntry[], bundleId: string, menu: string): RemapEntry | undefined {
+  return remaps.find((r) => r.bundleId === bundleId && r.menu === menu);
 }
 
-/** Insert or replace the remap for (bundleId, breadcrumb), returning the updated list. */
+/** Insert or replace the remap for (bundleId, menu), returning the updated list. */
 export async function upsertRemap(entry: RemapEntry): Promise<RemapEntry[]> {
   const remaps = await loadRemaps();
-  const next = remaps.filter((r) => !(r.bundleId === entry.bundleId && r.breadcrumb === entry.breadcrumb));
+  const next = remaps.filter((r) => !(r.bundleId === entry.bundleId && r.menu === entry.menu));
   next.push(entry);
   await saveRemaps(next);
   return next;
 }
 
-/** Remove the remap for (bundleId, breadcrumb), returning the updated list. */
-export async function removeRemap(bundleId: string, breadcrumb: string): Promise<RemapEntry[]> {
+/** Remove the remap for (bundleId, menu), returning the updated list. */
+export async function removeRemap(bundleId: string, menu: string): Promise<RemapEntry[]> {
   const remaps = await loadRemaps();
-  const next = remaps.filter((r) => !(r.bundleId === bundleId && r.breadcrumb === breadcrumb));
+  const next = remaps.filter((r) => !(r.bundleId === bundleId && r.menu === menu));
   await saveRemaps(next);
   return next;
 }
