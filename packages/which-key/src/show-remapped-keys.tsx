@@ -62,12 +62,12 @@ export default function Command() {
     { execute: bundleKey.length > 0, keepPreviousData: true },
   );
 
-  // Status tag shown before the shortcut tags (hover for details)
-  const STATUS_TAG: Record<ShortcutStatus, { value: string; color: Color }> = {
-    applied: { value: "Applied", color: Color.Green },
-    "not-applied": { value: "Not Applied", color: Color.Red },
-    mismatch: { value: "Mismatch", color: Color.Orange },
-    unknown: { value: "Unknown", color: Color.SecondaryText },
+  // Status shown as the row subtitle (plain text, hover for details)
+  const STATUS_LABEL: Record<ShortcutStatus, string> = {
+    applied: "Applied",
+    "not-applied": "Not Applied",
+    mismatch: "Mismatch",
+    unknown: "Unknown",
   };
 
   const statusTooltip = (entry: RemapEntry, status: ShortcutStatus): string => {
@@ -169,7 +169,7 @@ export default function Command() {
   return (
     <List isLoading={isLoading || isLoadingStatus} searchBarPlaceholder="Search remapped shortcuts…" throttle>
       {groups.map((group) => (
-        <List.Section key={group.title} title={group.title}>
+        <List.Section key={group.title} title={`${group.title} (${group.items.length})`}>
           {group.items.map((entry) => {
             const status = checkStatus(entry, keyEquivs?.[entry.bundleId]);
             return (
@@ -177,14 +177,13 @@ export default function Command() {
                 key={`${entry.bundleId}-${entry.menu}`}
                 icon={iconFor(entry)}
                 title={entry.breadcrumb}
-                subtitle={entry.menu}
-                // Status (defaults read) → pre-remap shortcut (gray) → the current one
+                subtitle={{ value: STATUS_LABEL[status], tooltip: statusTooltip(entry, status) }}
+                // Pre-remap shortcut (gray) before the current one
                 accessories={[
                   ...(entry.originalShortcut !== undefined
                     ? [{ tag: { value: entry.originalShortcut || "—", color: Color.SecondaryText } }]
                     : []),
                   { tag: { value: entry.shortcut, color: Color.Green } },
-                  { tag: STATUS_TAG[status], tooltip: statusTooltip(entry, status) },
                 ]}
                 actions={
                   <ActionPanel>
