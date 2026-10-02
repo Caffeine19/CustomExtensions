@@ -18,25 +18,30 @@ export interface FlatMenuItem {
  * This uses PID-based targeting (like Hammerspoon's hs.application:selectMenuItem),
  * which is far more reliable than AppleScript/System Events process name matching.
  */
-export async function clickMenuItem(appName: string, breadcrumb: string): Promise<void> {
+export async function clickMenuItem(appName: string, breadcrumb: string, bundleId?: string): Promise<void> {
   const segments = breadcrumb.split(" → ");
   if (segments.length < 2) throw new Error("Invalid menu path");
 
   const scriptPath = `${environment.assetsPath}/click-menu-item.swift`;
 
   await new Promise<void>((resolve, reject) => {
-    execFile("swift", [scriptPath, appName, ...segments], { timeout: 10000 }, (err, _stdout, stderr) => {
-      if (stderr?.trim()) {
-        console.error("[click-menu-item]", stderr.trim());
-      }
-      if (err) {
-        // Extract the meaningful error from stderr
-        const msg = stderr?.trim() || err.message;
-        reject(new Error(msg));
-      } else {
-        resolve();
-      }
-    });
+    execFile(
+      "swift",
+      [scriptPath, appName, bundleId || "-", ...segments],
+      { timeout: 10000 },
+      (err, _stdout, stderr) => {
+        if (stderr?.trim()) {
+          console.error("[click-menu-item]", stderr.trim());
+        }
+        if (err) {
+          // Extract the meaningful error from stderr
+          const msg = stderr?.trim() || err.message;
+          reject(new Error(msg));
+        } else {
+          resolve();
+        }
+      },
+    );
   });
 }
 export async function fetchAllMenus(): Promise<{ appName: string; items: FlatMenuItem[] }> {

@@ -138,7 +138,7 @@ export default function Command() {
   const handleRun = async (breadcrumb: string) => {
     if (!appInfo) return;
     try {
-      await runMenuItem(appInfo.name, breadcrumb);
+      await runMenuItem(appInfo.name, breadcrumb, appInfo.bundleId);
     } catch (e) {
       await showToast({ style: Toast.Style.Failure, title: "Failed to run menu item", message: String(e) });
     }

@@ -7,8 +7,10 @@
 // apps (where the AX hierarchy is lazily populated and AXPress is ignored
 // when the app isn't frontmost).
 //
-// Usage: click-menu-item.swift <AppName> <MenuBarItem> [submenu...] <MenuItem>
-// Example: click-menu-item.swift "Code - Insiders" "Code - Insiders" "Preferences" "Settings"
+// Usage: click-menu-item.swift <AppName> <BundleId|"-"> <MenuBarItem> [submenu...] <MenuItem>
+// Example: click-menu-item.swift "Code - Insiders" "-" "Code - Insiders" "Preferences" "Settings"
+//          (pass "-" when the bundle id is unknown; the name is then matched against
+//           both the Info.plist name and the on-disk file name)
 //
 // Exits with code 0 on success, 1 on error (message to stderr).
 
@@ -16,28 +18,46 @@ import Cocoa
 
 // ─── Parse arguments ───
 
-guard CommandLine.arguments.count >= 3 else {
-    fputs("Usage: click-menu-item.swift <AppName> <MenuBarItem> [submenu...] <MenuItem>\n", stderr)
+guard CommandLine.arguments.count >= 4 else {
+    fputs("Usage: click-menu-item.swift <AppName> <BundleId|\"-\"> <MenuBarItem> [submenu...] <MenuItem>\n", stderr)
     exit(1)
 }
 
 let appName = CommandLine.arguments[1]
-let pathSegments = Array(CommandLine.arguments.dropFirst(2))
+let bundleId = CommandLine.arguments[2]
+let pathSegments = Array(CommandLine.arguments.dropFirst(3))
 
 guard !pathSegments.isEmpty else {
     fputs("ERROR:No menu path segments provided\n", stderr)
     exit(1)
 }
 
-// Normalize: strip ".app" suffix for matching
+// Normalize: strip ".app" suffix for matching. Raycast reports the on-disk file name,
+// which can differ from the Info.plist name after the user renames the bundle
+// (e.g. file = "HBuilderX Arm.app" while localizedName = "HBuilderX").
 let normalizedName = appName.hasSuffix(".app") ? String(appName.dropLast(4)) : appName
 
-// ─── Resolve PID from app name ───
+// ─── Resolve PID: bundle id first (rename-proof), then name variants ───
 
-guard let app = NSWorkspace.shared.runningApplications.first(where: {
-    $0.activationPolicy == .regular && ($0.localizedName == normalizedName || $0.bundleIdentifier == appName)
-}) else {
-    fputs("ERROR:App not found: \"\(appName)\"\n", stderr)
+func matchesName(_ a: NSRunningApplication) -> Bool {
+    let candidates = [appName, normalizedName]
+    if let ln = a.localizedName, candidates.contains(ln) { return true } // Info.plist name
+    if let file = a.bundleURL?.deletingPathExtension().lastPathComponent, candidates.contains(file) { return true } // on-disk name
+    return false
+}
+
+let app: NSRunningApplication? = {
+    if bundleId != "-",
+       let byId = NSWorkspace.shared.runningApplications.first(where: { $0.bundleIdentifier == bundleId }) {
+        return byId
+    }
+    return NSWorkspace.shared.runningApplications.first(where: {
+        $0.activationPolicy == .regular && matchesName($0)
+    })
+}()
+
+guard let app = app else {
+    fputs("ERROR:App not found: \"\(appName)\" (bundleId: \(bundleId))\n", stderr)
     exit(1)
 }
 let pid = app.processIdentifier

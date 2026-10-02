@@ -99,7 +99,7 @@ export default function Command() {
 
   const handleRun = async (entry: RemapEntry) => {
     try {
-      await runMenuItem(entry.app, entry.breadcrumb);
+      await runMenuItem(entry.app, entry.breadcrumb, entry.bundleId);
     } catch (e) {
       await showToast({ style: Toast.Style.Failure, title: "Failed to run menu item", message: String(e) });
     }
