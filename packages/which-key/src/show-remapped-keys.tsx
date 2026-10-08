@@ -25,6 +25,7 @@ import {
 } from "./utils/appShortcuts";
 import type { ShortcutStatus } from "./utils/appShortcuts";
 import { runMenuItem } from "./utils/runMenuItem";
+import { formatShortcut } from "./utils/search";
 import RemapForm from "./components/RemapForm";
 import type { RemapTarget } from "./components/RemapForm";
 
@@ -181,12 +182,19 @@ export default function Command() {
                 icon={iconFor(entry)}
                 title={entry.breadcrumb}
                 subtitle={{ value: STATUS_LABEL[status], tooltip: statusTooltip(entry, status) }}
-                // Pre-remap shortcut (gray) before the current one
+                // Pre-remap shortcut (gray) before the current one, in standard ⌃⌥⇧⌘ order
                 accessories={[
                   ...(entry.originalShortcut !== undefined
-                    ? [{ tag: { value: entry.originalShortcut || "—", color: Color.SecondaryText } }]
+                    ? [
+                        {
+                          tag: {
+                            value: entry.originalShortcut ? formatShortcut(entry.originalShortcut) : "—",
+                            color: Color.SecondaryText,
+                          },
+                        },
+                      ]
                     : []),
-                  { tag: { value: entry.shortcut, color: Color.Green } },
+                  { tag: { value: formatShortcut(entry.shortcut), color: Color.Green } },
                 ]}
                 actions={
                   <ActionPanel>
@@ -218,7 +226,7 @@ export default function Command() {
                     </ActionPanel.Section>
                     <ActionPanel.Section title="Copy">
                       <Action.CopyToClipboard title="Copy Menu Path" content={entry.breadcrumb} />
-                      <Action.CopyToClipboard title="Copy Shortcut" content={entry.shortcut} />
+                      <Action.CopyToClipboard title="Copy Shortcut" content={formatShortcut(entry.shortcut)} />
                       <Action.CopyToClipboard title="Copy Encoded Value" content={entry.encoded} />
                     </ActionPanel.Section>
                     <ActionPanel.Section>

@@ -145,6 +145,30 @@ function normalizeShortcut(shortcut: string): { mods: string; key: string } {
 }
 
 /**
+ * Reorder a shortcut's modifier glyphs to the standard macOS display order
+ * (fn, then ⌃ ⌥ ⇧ ⌘) while preserving the key part exactly.
+ * e.g. "⌘⌃S" → "⌃⌘S", "⌘⌥⇧T" → "⌥⇧⌘T", "⌥Space" → "⌥Space".
+ */
+export function formatShortcut(shortcut: string): string {
+  if (!shortcut) return shortcut;
+  let hasFn = false;
+  let rest = shortcut;
+  if (rest.startsWith("fn")) {
+    hasFn = true;
+    rest = rest.slice(2);
+  }
+  const mods: string[] = [];
+  let key = "";
+  for (const ch of rest) {
+    if (["⌃", "⌥", "⇧", "⌘"].includes(ch)) mods.push(ch);
+    else key += ch;
+  }
+  const order: Record<string, number> = { "⌃": 0, "⌥": 1, "⇧": 2, "⌘": 3 };
+  mods.sort((a, b) => (order[a] ?? 9) - (order[b] ?? 9));
+  return `${hasFn ? "fn" : ""}${mods.join("")}${key}`;
+}
+
+/**
  * Check if a menu item matches the search query.
  * Matches against:
  *   1. Breadcrumb text (e.g. "File → Save As…")
