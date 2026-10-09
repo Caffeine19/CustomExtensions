@@ -201,9 +201,9 @@ export default function Command() {
     const filtered = searchText.trim() ? items.filter((item) => matchesQuery(item, searchText)) : items;
     const groups = new Map<string, typeof items>();
     for (const item of filtered) {
-      // Breadcrumb: "App → TopLevel → …", direct children belong to the app menu itself
+      // Breadcrumb root IS the top-level menu title: "Window → Move To → Display"
       const segments = item.breadcrumb.split(" → ");
-      const parent = segments.length > 2 ? segments[1] : appName;
+      const parent = segments[0] || appName;
       const group = groups.get(parent);
       if (group) group.push(item);
       else groups.set(parent, [item]);
