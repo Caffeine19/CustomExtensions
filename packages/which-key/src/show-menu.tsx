@@ -6,6 +6,7 @@ import {
   Color,
   Form,
   getFrontmostApplication,
+  getPreferenceValues,
   Icon,
   Image,
   List,
@@ -22,6 +23,7 @@ import { fetchAllMenus } from "./utils/menuItems";
 import { matchesQuery } from "./utils/search";
 import { getKeyBindings, matchKeyBinding, formatKeySequence } from "./utils/keybindings";
 import { resolveBundleId, resolveMenuKey } from "./utils/appShortcuts";
+import { filterBrowserMenuItems } from "./utils/browserFilter";
 import { runMenuItem } from "./utils/runMenuItem";
 import RemapForm from "./components/RemapForm";
 import type { RemapTarget } from "./components/RemapForm";
@@ -65,6 +67,9 @@ export default function Command() {
   const [searchText, setSearchText] = useState("");
   const [mode, setMode] = useState<Mode>("search");
 
+  // Read once per launch (toggling the pref in Raycast settings re-runs the command)
+  const { excludeBrowserDynamicItems } = getPreferenceValues<Preferences.ShowMenu>();
+
   // Restore persisted mode on mount
   useEffect(() => {
     (async () => {
@@ -95,7 +100,9 @@ export default function Command() {
   } = useCachedPromise(
     async (_name) => {
       const { items } = await fetchAllMenus();
-      return items.filter((item) => !item.hasSubmenu);
+      const leaves = items.filter((item) => !item.hasSubmenu);
+      // Optionally hide dynamic browser content (bookmarks/history/tabs) via whitelist
+      return excludeBrowserDynamicItems ? filterBrowserMenuItems(leaves, appInfo?.bundleId ?? "") : leaves;
     },
     [appInfo?.name ?? ""],
     { keepPreviousData: true, execute: !!appInfo?.name },

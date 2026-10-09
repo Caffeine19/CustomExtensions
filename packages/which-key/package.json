@@ -16,7 +16,18 @@
       "title": "Show Menu",
       "subtitle": "Which Key",
       "description": "Browse the current app's menu bar",
-      "mode": "view"
+      "mode": "view",
+      "preferences": [
+        {
+          "name": "excludeBrowserDynamicItems",
+          "title": "Browser Menus",
+          "label": "Exclude browser bookmarks/history/tabs",
+          "description": "Hide dynamic bookmark, history and open-tab entries in known browsers' menus, keeping only static items via a whitelist.",
+          "type": "checkbox",
+          "required": false,
+          "default": true
+        }
+      ]
     },
     {
       "name": "show-remapped-keys",
