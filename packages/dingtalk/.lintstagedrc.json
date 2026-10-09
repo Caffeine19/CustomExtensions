@@ -1,0 +1,7 @@
+{
+  "*.{js,jsx,cjs,mjs,ts,tsx}": [
+    "eslint --fix",
+    "prettier --write --experimental-cli --ignore-unknown"
+  ],
+  "*.{json,jsonc,md,yml,yaml,css,html}": "prettier --write --experimental-cli --ignore-unknown"
+}

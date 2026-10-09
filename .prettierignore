@@ -1,2 +1,3 @@
 *.lua
 *.applescript
+pnpm-lock.yaml
