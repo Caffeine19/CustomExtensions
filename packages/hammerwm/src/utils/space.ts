@@ -221,9 +221,10 @@ export async function getAllWindows(): Promise<Window[]> {
   const code = /* lua */ `
     local windows = {}
     
-    -- Get all windows from all spaces
+    -- Get all windows from all spaces, most recently focused first
+    -- (sortByFocusedLast is windowfilter's default, made explicit here)
     local windowFilter = hs.window.filter.new()
-    local allWindows = windowFilter:getWindows()
+    local allWindows = windowFilter:getWindows(hs.window.filter.sortByFocusedLast)
     
     print("Found", #allWindows, "total windows")
     
@@ -232,10 +233,9 @@ export async function getAllWindows(): Promise<Window[]> {
         local appName = app and app:name() or "Unknown"
         local appPath = app and app:path() or nil
         local windowTitle = window:title() or "Untitled"
-        local frame = window:frame()
         
         -- Skip Raycast windows and non-standard windows
-        if window:isStandard() then
+        if window:isStandard() and appName ~= "Raycast" then
             local windowId = window:id()
             local windowSpaces = hs.spaces.windowSpaces(windowId)
             local spaceId = windowSpaces and windowSpaces[1] or nil

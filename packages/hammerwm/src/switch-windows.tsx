@@ -11,7 +11,7 @@ import {
   Toast,
   popToRoot,
 } from "@raycast/api";
-import { useCachedPromise } from "@raycast/utils";
+import { useCachedPromise, useCachedState } from "@raycast/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSpaceStore } from "./stores/space-store";
 import { DEFAULT_WINDOW_ICON } from "./constants/icon";
@@ -25,10 +25,19 @@ import { Space, Window as AppWindow } from "./types/space";
 
 const ALL_APPS_VALUE = "__all__";
 
+/**
+ * Window list sort mode: "focus" = most recently focused first (MRU),
+ * "app" = alphabetical by application name.
+ */
+type SortMode = "focus" | "app";
+
+/** Props for a single window row in the Switch Windows list */
 interface WindowItemProps {
   window: AppWindow;
   appIcon?: string;
   onFocus: (windowId: string) => void;
+  sortMode: SortMode;
+  onToggleSort: () => void;
 }
 
 function MoveToSpaceList({
@@ -114,7 +123,13 @@ function MoveToSpaceList({
   );
 }
 
-function WindowItem({ window, appIcon, onFocus }: WindowItemProps) {
+function WindowItem({
+  window,
+  appIcon,
+  onFocus,
+  sortMode,
+  onToggleSort,
+}: WindowItemProps) {
   const { push } = useNavigation();
 
   const getIcon = (): Image.ImageLike => {
@@ -163,7 +178,16 @@ function WindowItem({ window, appIcon, onFocus }: WindowItemProps) {
               )
             }
           />
-          <Action.CopyToClipboard
+          <Action
+            title={
+              sortMode === "focus"
+                ? "Sort by Application Name"
+                : "Sort by Focus Order"
+            }
+            icon={sortMode === "focus" ? Icon.Lowercase : Icon.Clock}
+            onAction={onToggleSort}
+          />
+          {/* <Action.CopyToClipboard
             title="Copy Window Title"
             content={window.title}
             shortcut={{ modifiers: ["cmd"], key: "c" }}
@@ -172,7 +196,7 @@ function WindowItem({ window, appIcon, onFocus }: WindowItemProps) {
             title="Copy Window ID"
             content={window.id}
             shortcut={{ modifiers: ["cmd", "shift"], key: "c" }}
-          />
+          /> */}
         </ActionPanel>
       }
     />
@@ -206,6 +230,14 @@ export default function Command() {
 
   const [searchText, setSearchText] = useState("");
   const [selectedApp, setSelectedApp] = useState(ALL_APPS_VALUE);
+  const [sortMode, setSortMode] = useCachedState<SortMode>(
+    "window-sort-mode",
+    "focus",
+  );
+
+  const handleToggleSort = () => {
+    setSortMode((mode) => (mode === "focus" ? "app" : "focus"));
+  };
 
   if (error) {
     showToast({
@@ -220,17 +252,26 @@ export default function Command() {
     await focusWindowFn(windowId);
   };
 
-  const uniqueApps = unique(allWindows.map((w) => w.application)).sort();
+  // Raycast's own window is focused while this list is open, so it would
+  // always top the MRU order — exclude it entirely (same as switch-spaces.tsx)
+  const visibleWindows = allWindows.filter((w) => w.application !== "Raycast");
 
-  const filteredWindows = allWindows
-    .filter(
-      (window) =>
-        (selectedApp === ALL_APPS_VALUE ||
-          window.application === selectedApp) &&
-        (window.title.toLowerCase().includes(searchText.toLowerCase()) ||
-          window.application.toLowerCase().includes(searchText.toLowerCase())),
-    )
-    .sort((a, b) => a.application.localeCompare(b.application));
+  const uniqueApps = unique(visibleWindows.map((w) => w.application)).sort();
+
+  const matchedWindows = visibleWindows.filter(
+    (window) =>
+      (selectedApp === ALL_APPS_VALUE || window.application === selectedApp) &&
+      (window.title.toLowerCase().includes(searchText.toLowerCase()) ||
+        window.application.toLowerCase().includes(searchText.toLowerCase())),
+  );
+
+  // "focus" keeps Hammerspoon's MRU order untouched; "app" sorts alphabetically
+  const filteredWindows =
+    sortMode === "app"
+      ? [...matchedWindows].sort((a, b) =>
+          a.application.localeCompare(b.application),
+        )
+      : matchedWindows;
 
   return (
     <List
@@ -259,6 +300,8 @@ export default function Command() {
           window={window}
           appIcon={appIcons[window.application]}
           onFocus={handleFocus}
+          sortMode={sortMode}
+          onToggleSort={handleToggleSort}
         />
       ))}
     </List>
