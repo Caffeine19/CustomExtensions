@@ -1,16 +1,10 @@
-import { getSelectedFinderItems, showToast, Toast, open, Clipboard } from "@raycast/api";
+import { getSelectedFinderItems, showToast, Toast, open, Clipboard, getPreferenceValues } from "@raycast/api";
 import { existsSync } from "fs";
 import { homedir } from "os";
 import { join, parse } from "path";
 import { promisifyExec } from "./utils/promisifyExec";
 import { tryit } from "radash";
 
-/**
- * 把单个文件转换成同目录下的 markdown，并用默认应用打开
- *
- * @param sourceFilePath - 源文件路径
- * @returns 转换生成的 markdown 路径；失败时返回错误信息
- */
 async function convertFile(sourceFilePath: string): Promise<{ mdFilePath?: string; error?: string }> {
   const { dir, name } = parse(sourceFilePath);
   const mdFilePath = join(dir, `${name}.md`);
@@ -21,10 +15,15 @@ async function convertFile(sourceFilePath: string): Promise<{ mdFilePath?: strin
   const extraPaths = [join(home, ".local", "bin"), "/opt/homebrew/bin", "/usr/local/bin"].join(":");
   const extendedPath = `${extraPaths}:${process.env.PATH || ""}`;
 
-  const [convertErr, convertRes] = await tryit(promisifyExec)(`markitdown "${sourceFilePath}" > "${mdFilePath}"`, {
-    shell: "/bin/zsh",
-    env: { ...process.env, PATH: extendedPath },
-  });
+  const markitdownCommand = getPreferenceValues().markitdownPath?.trim() || "markitdown";
+
+  const [convertErr, convertRes] = await tryit(promisifyExec)(
+    `${markitdownCommand} "${sourceFilePath}" > "${mdFilePath}"`,
+    {
+      shell: "/bin/zsh",
+      env: { ...process.env, PATH: extendedPath },
+    },
+  );
 
   if (convertErr) {
     return { error: convertErr.message };
@@ -44,7 +43,6 @@ async function convertFile(sourceFilePath: string): Promise<{ mdFilePath?: strin
 }
 
 export default async function Command() {
-  // Try to get the selected files from Finder first (支持多选)
   const sourceFilePaths: string[] = [];
 
   const [finderErr, selectedItems] = await tryit(getSelectedFinderItems)();
@@ -77,7 +75,6 @@ export default async function Command() {
     title: sourceFilePaths.length > 1 ? `Converting ${sourceFilePaths.length} files…` : "Converting to Markdown…",
   });
 
-  // 逐个转换，收集成功与失败的结果
   const results = await Promise.all(sourceFilePaths.map((path) => convertFile(path)));
   const failures = results
     .map((result, index) => ({ path: sourceFilePaths[index], error: result.error }))

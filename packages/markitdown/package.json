@@ -19,6 +19,16 @@
       "mode": "no-view"
     }
   ],
+  "preferences": [
+    {
+      "name": "markitdownPath",
+      "title": "Markitdown Path",
+      "description": "Path to the markitdown executable. Leave empty to use the one found in PATH.",
+      "type": "textfield",
+      "required": false,
+      "placeholder": "/opt/homebrew/bin/markitdown"
+    }
+  ],
   "dependencies": {
     "@raycast/api": "^1.104.4",
     "@raycast/utils": "^1.17.0",
