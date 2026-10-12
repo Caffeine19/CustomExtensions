@@ -134,7 +134,7 @@ export default function Command() {
 
   return (
     <MenuBarExtra
-      icon="github-copilot-dark.svg"
+      icon={{ source: "github-copilot-dark.svg", tintColor: Color.PrimaryText }}
       title={menubarTitle(
         activeRecentSessions,
         waitingSessions.length,
