@@ -1,0 +1,45 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "in-app-shortcuts",
+  "title": "In-App Shortcuts",
+  "description": "Browse the per-app keyboard shortcuts registered by your Hammerspoon configuration",
+  "icon": "extension-icon.png",
+  "author": "CaffeineCat",
+  "platforms": [
+    "macOS"
+  ],
+  "license": "MIT",
+  "categories": [
+    "Developer Tools",
+    "Productivity"
+  ],
+  "commands": [
+    {
+      "name": "show-shortcuts",
+      "title": "Show Shortcuts",
+      "subtitle": "In-App Shortcuts",
+      "description": "Browse Hammerspoon in-app shortcuts grouped by application",
+      "mode": "view"
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "^1.104.19",
+    "@raycast/utils": "^1.17.0"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^2.0.4",
+    "@types/node": "22.19.17",
+    "@types/react": "19.0.10",
+    "eslint": "^9.22.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.2"
+  },
+  "scripts": {
+    "build": "ray build",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "prepublishOnly": "echo \"🚨 Do NOT publish this extension to the Raycast Store (it's for personal use only) 🚨\" && exit 1",
+    "publish": "npx @raycast/api@latest publish"
+  }
+}

@@ -259,6 +259,37 @@ importers:
         specifier: ^5.8.2
         version: 5.9.3
 
+  packages/darlendar:
+    dependencies:
+      '@raycast/api':
+        specifier: ^1.104.25
+        version: 1.104.25(@types/node@22.19.17)(@types/react@19.0.10)
+      '@raycast/utils':
+        specifier: ^1.17.0
+        version: 1.19.1(@raycast/api@1.104.25(@types/node@22.19.17)(@types/react@19.0.10))
+      dayjs:
+        specifier: ^1.11.13
+        version: 1.11.21
+    devDependencies:
+      '@raycast/eslint-config':
+        specifier: ^2.0.4
+        version: 2.1.1(eslint@9.39.4)(prettier@3.8.4)(typescript@5.9.3)
+      '@types/node':
+        specifier: 22.19.17
+        version: 22.19.17
+      '@types/react':
+        specifier: 19.0.10
+        version: 19.0.10
+      eslint:
+        specifier: ^9.22.0
+        version: 9.39.4
+      prettier:
+        specifier: ^3.5.3
+        version: 3.8.4
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+
   packages/dingtalk:
     dependencies:
       '@raycast/api':
@@ -315,6 +346,34 @@ importers:
         specifier: ^5.8.2
         version: 5.9.3
 
+  packages/extensions-gallery:
+    dependencies:
+      '@raycast/api':
+        specifier: ^1.104.25
+        version: 1.104.25(@types/node@22.19.17)(@types/react@19.0.10)
+      '@raycast/utils':
+        specifier: ^1.17.0
+        version: 1.19.1(@raycast/api@1.104.25(@types/node@22.19.17)(@types/react@19.0.10))
+    devDependencies:
+      '@raycast/eslint-config':
+        specifier: ^2.0.4
+        version: 2.1.1(eslint@9.39.4)(prettier@3.8.4)(typescript@5.9.3)
+      '@types/node':
+        specifier: 22.19.17
+        version: 22.19.17
+      '@types/react':
+        specifier: 19.0.10
+        version: 19.0.10
+      eslint:
+        specifier: ^9.22.0
+        version: 9.39.4
+      prettier:
+        specifier: ^3.5.3
+        version: 3.8.4
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+
   packages/hammerwm:
     dependencies:
       '@raycast/api':
@@ -348,6 +407,34 @@ importers:
       eslint-plugin-react:
         specifier: ^7.37.5
         version: 7.37.5(eslint@9.39.4)
+      prettier:
+        specifier: ^3.5.3
+        version: 3.8.4
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+
+  packages/in-app-shortcuts:
+    dependencies:
+      '@raycast/api':
+        specifier: ^1.104.19
+        version: 1.104.25(@types/node@22.19.17)(@types/react@19.0.10)
+      '@raycast/utils':
+        specifier: ^1.17.0
+        version: 1.19.1(@raycast/api@1.104.25(@types/node@22.19.17)(@types/react@19.0.10))
+    devDependencies:
+      '@raycast/eslint-config':
+        specifier: ^2.0.4
+        version: 2.1.1(eslint@9.39.4)(prettier@3.8.4)(typescript@5.9.3)
+      '@types/node':
+        specifier: 22.19.17
+        version: 22.19.17
+      '@types/react':
+        specifier: 19.0.10
+        version: 19.0.10
+      eslint:
+        specifier: ^9.22.0
+        version: 9.39.4
       prettier:
         specifier: ^3.5.3
         version: 3.8.4
@@ -503,6 +590,37 @@ importers:
       '@types/node':
         specifier: 22.13.10
         version: 22.13.10
+      '@types/react':
+        specifier: 19.0.10
+        version: 19.0.10
+      eslint:
+        specifier: ^9.22.0
+        version: 9.39.4
+      prettier:
+        specifier: ^3.5.3
+        version: 3.8.4
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+
+  packages/restart-foremost-app:
+    dependencies:
+      '@raycast/api':
+        specifier: ^1.104.25
+        version: 1.104.25(@types/node@22.19.17)(@types/react@19.0.10)
+      '@raycast/utils':
+        specifier: ^1.17.0
+        version: 1.19.1(@raycast/api@1.104.25(@types/node@22.19.17)(@types/react@19.0.10))
+      radash:
+        specifier: ^12.1.1
+        version: 12.1.1
+    devDependencies:
+      '@raycast/eslint-config':
+        specifier: ^2.0.4
+        version: 2.1.1(eslint@9.39.4)(prettier@3.8.4)(typescript@5.9.3)
+      '@types/node':
+        specifier: 22.19.17
+        version: 22.19.17
       '@types/react':
         specifier: 19.0.10
         version: 19.0.10
@@ -1935,6 +2053,22 @@ packages:
 
   '@raycast/api@1.104.23':
     resolution: {integrity: sha512-8ZdL9Jhc7C/+nQkUIM78pP0ODPR6wVvPjgg0uU6+n5hEaYABmrCIyA/gFcjfAYjU6EUFV2ZDHp6JNPFjQNyBWQ==}
+    engines: {node: '>=22.22.2'}
+    hasBin: true
+    peerDependencies:
+      '@types/node': 22.19.17
+      '@types/react': 19.0.10
+      react-devtools: 6.1.1
+    peerDependenciesMeta:
+      '@types/node':
+        optional: true
+      '@types/react':
+        optional: true
+      react-devtools:
+        optional: true
+
+  '@raycast/api@1.104.25':
+    resolution: {integrity: sha512-4tZaoGBb5iVd9OQrDAwaTZlinz4/oRYpCaYXIaWKvjM5zxajos/Kpajp/y0ia+cOEv+qCvZ0e6m7qUvfqHj80Q==}
     engines: {node: '>=22.22.2'}
     hasBin: true
     peerDependencies:
@@ -6969,6 +7103,20 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  '@raycast/api@1.104.25(@types/node@22.19.17)(@types/react@19.0.10)':
+    dependencies:
+      '@oclif/core': 4.11.4
+      '@oclif/plugin-autocomplete': 3.2.50
+      '@oclif/plugin-help': 6.2.50
+      '@oclif/plugin-not-found': 3.2.87(@types/node@22.19.17)
+      esbuild: 0.27.7
+      react: 19.0.0
+    optionalDependencies:
+      '@types/node': 22.19.17
+      '@types/react': 19.0.10
+    transitivePeerDependencies:
+      - supports-color
+
   '@raycast/eslint-config@2.1.1(eslint@9.39.4)(prettier@3.8.4)(typescript@5.9.3)':
     dependencies:
       '@eslint/js': 9.39.4
@@ -7017,6 +7165,18 @@ snapshots:
   '@raycast/utils@1.19.1(@raycast/api@1.104.23(@types/node@22.19.17)(@types/react@19.0.10))':
     dependencies:
       '@raycast/api': 1.104.23(@types/node@22.19.17)(@types/react@19.0.10)
+      cross-fetch: 3.2.0
+      dequal: 2.0.3
+      object-hash: 3.0.0
+      signal-exit: 4.1.0
+      stream-chain: 2.2.5
+      stream-json: 1.9.1
+    transitivePeerDependencies:
+      - encoding
+
+  '@raycast/utils@1.19.1(@raycast/api@1.104.25(@types/node@22.19.17)(@types/react@19.0.10))':
+    dependencies:
+      '@raycast/api': 1.104.25(@types/node@22.19.17)(@types/react@19.0.10)
       cross-fetch: 3.2.0
       dequal: 2.0.3
       object-hash: 3.0.0
