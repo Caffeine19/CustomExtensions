@@ -1,7 +1,7 @@
 import { Action, ActionPanel, Color, getApplications, Icon, Image, List } from "@raycast/api";
 import { showFailureToast, useCachedPromise } from "@raycast/utils";
 import { useMemo } from "react";
-import { fetchShortcuts, groupByApp } from "./utils/shortcuts";
+import { fetchShortcuts, formatShortcut, groupByApp } from "./utils/shortcuts";
 import type { InAppShortcut } from "./utils/shortcuts";
 
 export default function Command() {
@@ -21,14 +21,20 @@ export default function Command() {
   const groups = useMemo(() => groupByApp(shortcuts ?? []), [shortcuts]);
 
   const iconFor = (appName: string): Image.ImageLike => {
-    const app = applications?.find((a) => a.name.toLowerCase() === appName.toLowerCase());
+    const app = applications?.find((a) => a.name === appName);
     return app?.path ? { fileIcon: app.path } : Icon.Keyboard;
   };
 
   const keywordsFor = (item: InAppShortcut): string[] =>
-    [item.appName, item.requestedAppName, item.hotkeyLabel, item.description ?? "", item.key, ...item.mods].filter(
-      Boolean,
-    );
+    [
+      item.appName,
+      item.requestedAppName,
+      item.hotkeyLabel,
+      formatShortcut(item.hotkeyLabel),
+      item.description ?? "",
+      item.key,
+      ...item.mods,
+    ].filter(Boolean);
 
   return (
     <List isLoading={isLoading} filtering searchBarPlaceholder="Search by app, shortcut, or description">
@@ -39,9 +45,9 @@ export default function Command() {
             <List.Item
               key={item.id}
               icon={iconFor(group.app)}
-              title={item.description ?? item.hotkeyLabel}
+              title={item.description ?? formatShortcut(item.hotkeyLabel)}
               keywords={keywordsFor(item)}
-              accessories={[{ tag: { value: item.hotkeyLabel, color: Color.Blue } }]}
+              accessories={[{ tag: { value: formatShortcut(item.hotkeyLabel), color: Color.Green } }]}
               actions={
                 <ActionPanel>
                   <Action title="Reload Data" onAction={revalidate} />
