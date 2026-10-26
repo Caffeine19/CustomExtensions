@@ -17,6 +17,4 @@ export const hexToBytes = (hex: string): number[] => {
 
 /** 将 hex 字符串格式化为每行 16 字节的转储样式 */
 export const formatHexDump = (hex: string): string =>
-  (hex.match(/.{1,32}/g) ?? [])
-    .map((line) => (line.match(/.{2}/g) ?? []).join(" "))
-    .join("\n");
+  (hex.match(/.{1,32}/g) ?? []).map((line) => (line.match(/.{2}/g) ?? []).join(" ")).join("\n");

@@ -1,18 +1,9 @@
 import { Effect, Schedule } from "effect";
 import { fork } from "radash";
 
-import {
-  BATTERY_MAX,
-  BATTERY_MIN,
-  HID_BATTERY_PROTOCOLS,
-  type HidBatteryProtocol,
-} from "../constants/devices";
+import { BATTERY_MAX, BATTERY_MIN, HID_BATTERY_PROTOCOLS, type HidBatteryProtocol } from "../constants/devices";
 import type { BatteryError } from "../types/errors";
-import {
-  HidProtocolError,
-  HidTransportError,
-  NativeToolMissingError,
-} from "../types/errors";
+import { HidProtocolError, HidTransportError, NativeToolMissingError } from "../types/errors";
 import type { HidDeviceInfo } from "../types/hid";
 import { hexToBytes } from "../utils/hex";
 import { listDevices, queryDevice } from "../utils/native";
@@ -49,10 +40,7 @@ export interface BatteryReport {
 }
 
 /** 判断 HID 接口是否命中协议表条目（VID/PID/Usage 精确匹配） */
-export const matchesProtocol = (
-  device: HidDeviceInfo,
-  protocol: HidBatteryProtocol,
-): boolean =>
+export const matchesProtocol = (device: HidDeviceInfo, protocol: HidBatteryProtocol): boolean =>
   device.vendorId === protocol.vendorId &&
   device.productId === protocol.productId &&
   device.usagePage === protocol.usagePage &&
@@ -122,9 +110,7 @@ const parseBatteryLevel = (
   });
 
 /** 单次查询：发送 Feature Report 并解析电量（不含重试） */
-const queryOnce = (
-  protocol: HidBatteryProtocol,
-): Effect.Effect<BatteryReading, BatteryError> =>
+const queryOnce = (protocol: HidBatteryProtocol): Effect.Effect<BatteryReading, BatteryError> =>
   Effect.gen(function* () {
     const output = yield* queryDevice({
       vid: protocol.vendorId,
@@ -136,10 +122,7 @@ const queryOnce = (
       reportEncoding: protocol.reportEncoding,
     });
 
-    const { batteryLevel, isCharging } = yield* parseBatteryLevel(
-      protocol,
-      output.reply,
-    );
+    const { batteryLevel, isCharging } = yield* parseBatteryLevel(protocol, output.reply);
     return {
       protocol,
       device: output.device,
@@ -155,9 +138,7 @@ const queryOnce = (
  * 单次尝试 2 秒超时（覆盖无线链路往返），失败后间隔 100ms 重试，共 3 次尝试，
  * 与 HaloBattery 的重试语义一致。
  */
-export const queryBattery = (
-  protocol: HidBatteryProtocol,
-): Effect.Effect<BatteryReading, BatteryError> =>
+export const queryBattery = (protocol: HidBatteryProtocol): Effect.Effect<BatteryReading, BatteryError> =>
   queryOnce(protocol).pipe(
     Effect.timeout("2 seconds"),
     Effect.catchTag("TimeoutException", () =>
@@ -168,37 +149,23 @@ export const queryBattery = (
         }),
       ),
     ),
-    Effect.retry(
-      Schedule.recurs(2).pipe(Schedule.addDelay(() => "100 millis")),
-    ),
+    Effect.retry(Schedule.recurs(2).pipe(Schedule.addDelay(() => "100 millis"))),
   );
 
 /**
  * 批量查询协议表覆盖设备的电量。
  * 单个设备失败不中断整体查询，错误记录在结果的 failures 中。
  */
-export const queryAllBatteries = (): Effect.Effect<
-  BatteryReport,
-  NativeToolMissingError | HidTransportError
-> =>
+export const queryAllBatteries = (): Effect.Effect<BatteryReport, NativeToolMissingError | HidTransportError> =>
   Effect.gen(function* () {
     const devices = yield* listDevices();
 
     // 区分"协议表覆盖"与"未覆盖"的 HID 接口
-    const [supported, rest] = fork(devices, (device) =>
-      HID_BATTERY_PROTOCOLS.some((p) => matchesProtocol(device, p)),
-    );
+    const [supported, rest] = fork(devices, (device) => HID_BATTERY_PROTOCOLS.some((p) => matchesProtocol(device, p)));
 
     // 已支持设备的其他接口（同一接收器的鼠标/键盘接口等）不再单独列出
-    const knownVidPids = new Set(
-      HID_BATTERY_PROTOCOLS.map(
-        (protocol) => `${protocol.vendorId}:${protocol.productId}`,
-      ),
-    );
-    const [unmatched] = fork(
-      rest,
-      (device) => !knownVidPids.has(`${device.vendorId}:${device.productId}`),
-    );
+    const knownVidPids = new Set(HID_BATTERY_PROTOCOLS.map((protocol) => `${protocol.vendorId}:${protocol.productId}`));
+    const [unmatched] = fork(rest, (device) => !knownVidPids.has(`${device.vendorId}:${device.productId}`));
 
     // 建立接口 → 协议映射，避免后续重复查找
     const pairs = supported.flatMap((device) => {

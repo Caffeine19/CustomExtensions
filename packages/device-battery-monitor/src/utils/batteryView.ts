@@ -1,11 +1,7 @@
 import { Color } from "@raycast/api";
 import { alphabetical, fork, group, mapEntries, sort } from "radash";
 
-import type {
-  BatteryFailure,
-  BatteryReading,
-  BatteryReport,
-} from "../service/batteryService";
+import type { BatteryFailure, BatteryReading, BatteryReport } from "../service/batteryService";
 import type { HidDeviceInfo } from "../types/hid";
 import { formatHexDump } from "./hex";
 
@@ -17,16 +13,13 @@ export const batteryColor = (level: number): Color =>
 const STALE_AFTER_MS = 5 * 60 * 1000;
 
 /** 读数是否已过期（长时间未刷新时提示用户） */
-export const isStale = (reading: BatteryReading): boolean =>
-  Date.now() - reading.readAt.getTime() > STALE_AFTER_MS;
+export const isStale = (reading: BatteryReading): boolean => Date.now() - reading.readAt.getTime() > STALE_AFTER_MS;
 
 /** 格式化为 4 位大写十六进制 */
-const toHex4 = (value: number): string =>
-  value.toString(16).toUpperCase().padStart(4, "0");
+const toHex4 = (value: number): string => value.toString(16).toUpperCase().padStart(4, "0");
 
 /** VID:PID 格式化为 3434:D028 样式 */
-export const formatVidPid = (device: HidDeviceInfo): string =>
-  `${toHex4(device.vendorId)}:${toHex4(device.productId)}`;
+export const formatVidPid = (device: HidDeviceInfo): string => `${toHex4(device.vendorId)}:${toHex4(device.productId)}`;
 
 /** 接口号展示（-1 表示未知） */
 export const formatInterface = (device: HidDeviceInfo): string =>
@@ -37,9 +30,7 @@ export const formatTime = (date: Date): string => date.toLocaleTimeString();
 
 /** 设备展示名（产品名缺失时退回 VID:PID） */
 export const titleOf = (device: HidDeviceInfo): string =>
-  device.productName && device.productName !== "-"
-    ? device.productName
-    : formatVidPid(device);
+  device.productName && device.productName !== "-" ? device.productName : formatVidPid(device);
 
 /** 列表数据 */
 export interface DeviceBatteryViewData {
@@ -54,25 +45,16 @@ export interface DeviceBatteryViewData {
 const VISIBLE_TRANSPORTS = ["USB", "Bluetooth", "BluetoothLowEnergy"];
 
 /** 准备列表数据：过滤内置设备、同一物理设备去重、读数按电量升序 */
-export const prepareViewData = (
-  report: BatteryReport,
-): DeviceBatteryViewData => {
-  const [visible] = fork(report.unmatched, (device) =>
-    VISIBLE_TRANSPORTS.includes(device.transport),
-  );
+export const prepareViewData = (report: BatteryReport): DeviceBatteryViewData => {
+  const [visible] = fork(report.unmatched, (device) => VISIBLE_TRANSPORTS.includes(device.transport));
 
   // 同一物理设备可能暴露多个 HID 接口，按 VID/PID/位置 ID 去重
   const deduped = mapEntries(
-    group(
-      visible,
-      (device) => `${device.vendorId}:${device.productId}:${device.locationId}`,
-    ),
+    group(visible, (device) => `${device.vendorId}:${device.productId}:${device.locationId}`),
     (key, interfaces) => [key, (interfaces ?? [])[0]],
   );
   const others = alphabetical(
-    Object.values(deduped).filter(
-      (device): device is HidDeviceInfo => device !== undefined,
-    ),
+    Object.values(deduped).filter((device): device is HidDeviceInfo => device !== undefined),
     (device) => titleOf(device),
   );
 
@@ -110,9 +92,7 @@ export const readingDetailMarkdown = (reading: BatteryReading): string => {
     "```",
     `request: ${protocol.request}`,
     `reply prefix: ${protocol.replyPrefix}  battery offset: ${protocol.batteryOffset}` +
-      (protocol.chargingBit
-        ? `  charging bit: 0x${protocol.chargingBit.toString(16)}`
-        : ""),
+      (protocol.chargingBit ? `  charging bit: 0x${protocol.chargingBit.toString(16)}` : ""),
     "```",
   ].join("\n");
 };
@@ -129,9 +109,7 @@ export const failureDetailMarkdown = (failure: BatteryFailure): string => {
     `**Transport**: ${device.transport}`,
     `**Error**: ${error._tag}`,
     `**Message**: ${error.message}`,
-    ...("ioReturn" in error && error.ioReturn
-      ? [`**IOKit return**: ${error.ioReturn}`]
-      : []),
+    ...("ioReturn" in error && error.ioReturn ? [`**IOKit return**: ${error.ioReturn}`] : []),
     "",
     "若打开接口失败（如 0xE00002C5 / 0xE00002E2），",
     "通常是权限或沙箱限制，可先在终端直接运行 hid-query 验证。",

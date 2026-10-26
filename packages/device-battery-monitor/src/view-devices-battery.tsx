@@ -30,9 +30,7 @@ const describeError = (error: BatteryError): string => {
     case "NativeToolMissingError":
       return error.message;
     case "HidTransportError":
-      return error.ioReturn
-        ? `${error.message} (${error.ioReturn})`
-        : error.message;
+      return error.ioReturn ? `${error.message} (${error.ioReturn})` : error.message;
     case "HidProtocolError":
       return error.message;
   }
@@ -41,9 +39,7 @@ const describeError = (error: BatteryError): string => {
 /** 拉取电量报告；Effect 失败统一转为异常，交给 usePromise 的错误态 */
 const fetchBatteryReport = async (): Promise<BatteryReport> => {
   const result = await Effect.runPromise(Effect.either(queryAllBatteries()));
-  return result._tag === "Right"
-    ? result.right
-    : Promise.reject(new Error(describeError(result.left)));
+  return result._tag === "Right" ? result.right : Promise.reject(new Error(describeError(result.left)));
 };
 
 interface ItemActionsProps {
@@ -89,28 +85,11 @@ function ReadingItem({
       detail={<List.Item.Detail markdown={readingDetailMarkdown(reading)} />}
       actions={
         <ActionPanel>
-          <Action
-            title="Refresh"
-            icon={Icon.ArrowClockwise}
-            onAction={onRefresh}
-          />
-          <Action.CopyToClipboard
-            title="Copy Battery Level"
-            content={`${reading.batteryLevel}%`}
-          />
-          <Action.CopyToClipboard
-            title="Copy Raw Reply"
-            content={reading.rawReply}
-          />
-          <Action
-            title={showDetail ? "Hide Detail" : "Show Detail"}
-            icon={Icon.Eye}
-            onAction={onToggleDetail}
-          />
-          <Action.OpenInBrowser
-            title="Open Protocol Source"
-            url={reading.protocol.source}
-          />
+          <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+          <Action.CopyToClipboard title="Copy Battery Level" content={`${reading.batteryLevel}%`} />
+          <Action.CopyToClipboard title="Copy Raw Reply" content={reading.rawReply} />
+          <Action title={showDetail ? "Hide Detail" : "Show Detail"} icon={Icon.Eye} onAction={onToggleDetail} />
+          <Action.OpenInBrowser title="Open Protocol Source" url={reading.protocol.source} />
         </ActionPanel>
       }
     />
@@ -135,24 +114,10 @@ function FailureItem({
       detail={<List.Item.Detail markdown={failureDetailMarkdown(failure)} />}
       actions={
         <ActionPanel>
-          <Action
-            title="Refresh"
-            icon={Icon.ArrowClockwise}
-            onAction={onRefresh}
-          />
-          <Action.CopyToClipboard
-            title="Copy Error Message"
-            content={describeError(failure.error)}
-          />
-          <Action.CopyToClipboard
-            title="Copy VID:PID"
-            content={formatVidPid(failure.device)}
-          />
-          <Action
-            title={showDetail ? "Hide Detail" : "Show Detail"}
-            icon={Icon.Eye}
-            onAction={onToggleDetail}
-          />
+          <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+          <Action.CopyToClipboard title="Copy Error Message" content={describeError(failure.error)} />
+          <Action.CopyToClipboard title="Copy VID:PID" content={formatVidPid(failure.device)} />
+          <Action title={showDetail ? "Hide Detail" : "Show Detail"} icon={Icon.Eye} onAction={onToggleDetail} />
         </ActionPanel>
       }
     />
@@ -182,20 +147,9 @@ function DeviceItem({
       detail={<List.Item.Detail markdown={deviceDetailMarkdown(device)} />}
       actions={
         <ActionPanel>
-          <Action
-            title="Refresh"
-            icon={Icon.ArrowClockwise}
-            onAction={onRefresh}
-          />
-          <Action.CopyToClipboard
-            title="Copy VID:PID"
-            content={formatVidPid(device)}
-          />
-          <Action
-            title={showDetail ? "Hide Detail" : "Show Detail"}
-            icon={Icon.Eye}
-            onAction={onToggleDetail}
-          />
+          <Action title="Refresh" icon={Icon.ArrowClockwise} onAction={onRefresh} />
+          <Action.CopyToClipboard title="Copy VID:PID" content={formatVidPid(device)} />
+          <Action title={showDetail ? "Hide Detail" : "Show Detail"} icon={Icon.Eye} onAction={onToggleDetail} />
         </ActionPanel>
       }
     />
@@ -205,10 +159,7 @@ function DeviceItem({
 export default function Command() {
   const [showDetail, setShowDetail] = useState(false);
   const { data, isLoading, error, revalidate } = usePromise(fetchBatteryReport);
-  const view = useMemo(
-    () => (data ? prepareViewData(data) : undefined),
-    [data],
-  );
+  const view = useMemo(() => (data ? prepareViewData(data) : undefined), [data]);
 
   const itemActions: ItemActionsProps = {
     showDetail,
@@ -219,17 +170,10 @@ export default function Command() {
   };
 
   const isEmpty =
-    view !== undefined &&
-    view.readings.length === 0 &&
-    view.failures.length === 0 &&
-    view.others.length === 0;
+    view !== undefined && view.readings.length === 0 && view.failures.length === 0 && view.others.length === 0;
 
   return (
-    <List
-      isLoading={isLoading}
-      isShowingDetail={showDetail}
-      searchBarPlaceholder="Search devices"
-    >
+    <List isLoading={isLoading} isShowingDetail={showDetail} searchBarPlaceholder="Search devices">
       {error ? (
         <List.EmptyView
           icon={{ source: Icon.Warning, tintColor: Color.Red }}

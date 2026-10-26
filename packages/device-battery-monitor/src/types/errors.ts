@@ -1,9 +1,7 @@
 import { Data } from "effect";
 
 /** 原生 hid-query 工具缺失或不可执行（未编译 / 拷贝失败） */
-export class NativeToolMissingError extends Data.TaggedError(
-  "NativeToolMissingError",
-)<{
+export class NativeToolMissingError extends Data.TaggedError("NativeToolMissingError")<{
   readonly message: string;
 }> {}
 
@@ -24,7 +22,4 @@ export class HidProtocolError extends Data.TaggedError("HidProtocolError")<{
 }> {}
 
 /** 电量查询相关的全部结构化错误 */
-export type BatteryError =
-  | NativeToolMissingError
-  | HidTransportError
-  | HidProtocolError;
+export type BatteryError = NativeToolMissingError | HidTransportError | HidProtocolError;

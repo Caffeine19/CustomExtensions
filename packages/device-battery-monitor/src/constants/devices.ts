@@ -59,8 +59,7 @@ export const HID_BATTERY_PROTOCOLS: HidBatteryProtocol[] = [
     batteryOffset: 20,
     chargingBit: 0x80,
     reportEncoding: "raw",
-    source:
-      "https://github.com/HeyOkay/HaloBattery/blob/main/docs/protocols.md",
+    source: "https://github.com/HeyOkay/HaloBattery/blob/main/docs/protocols.md",
     notes:
       "2026-10-26 macOS 实测通过（键鼠共用接收器，报文与 keychron-battery-dkms 协议一致）；" +
       "充电时电量字节最高位置 1（如 0x95 = 充电中 + 21%），已实测验证",
@@ -77,8 +76,7 @@ export const HID_BATTERY_PROTOCOLS: HidBatteryProtocol[] = [
     batteryOffset: 20,
     chargingBit: 0x80,
     reportEncoding: "auto",
-    source:
-      "https://github.com/HeyOkay/HaloBattery/blob/main/providers/keychron.py",
+    source: "https://github.com/HeyOkay/HaloBattery/blob/main/providers/keychron.py",
     notes: "来自 HaloBattery 协议表，本机未实测",
   },
 ];

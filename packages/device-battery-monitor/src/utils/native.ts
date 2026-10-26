@@ -9,12 +9,7 @@ import { tryit } from "radash";
 
 import type { ReportEncoding } from "../constants/devices";
 import { HidTransportError, NativeToolMissingError } from "../types/errors";
-import type {
-  HidDeviceInfo,
-  HidErrorOutput,
-  HidListOutput,
-  HidQueryOutput,
-} from "../types/hid";
+import type { HidDeviceInfo, HidErrorOutput, HidListOutput, HidQueryOutput } from "../types/hid";
 
 const execFileAsync = promisify(execFile);
 
@@ -34,15 +29,11 @@ export const ensureTool = (): Effect.Effect<string, NativeToolMissingError> =>
   Effect.try({
     try: () => {
       if (!fs.existsSync(TOOL_ASSET)) {
-        throw new Error(
-          'hid-query not found in assets. Run "npm run build-native" first.',
-        );
+        throw new Error('hid-query not found in assets. Run "npm run build-native" first.');
       }
 
       const sourceSize = fs.statSync(TOOL_ASSET).size;
-      const targetSize = fs.existsSync(TOOL_BIN)
-        ? fs.statSync(TOOL_BIN).size
-        : -1;
+      const targetSize = fs.existsSync(TOOL_BIN) ? fs.statSync(TOOL_BIN).size : -1;
       if (sourceSize !== targetSize) {
         fs.copyFileSync(TOOL_ASSET, TOOL_BIN);
         fs.chmodSync(TOOL_BIN, 0o755);
@@ -67,12 +58,7 @@ const toTransportError = (error: unknown): HidTransportError => {
 
   // hid-query 失败时也输出结构化 JSON，优先解析出失败类别与 IOKit 返回值
   const [parseError, payload] = tryit(() => JSON.parse(err.stdout ?? ""))();
-  if (
-    !parseError &&
-    payload &&
-    typeof payload === "object" &&
-    "ok" in payload
-  ) {
+  if (!parseError && payload && typeof payload === "object" && "ok" in payload) {
     const failed = payload as HidErrorOutput;
     if (failed.ok === false) {
       return new HidTransportError({
@@ -97,9 +83,7 @@ const toTransportError = (error: unknown): HidTransportError => {
 };
 
 /** 执行 hid-query 并返回 stdout */
-const runTool = (
-  args: string[],
-): Effect.Effect<string, NativeToolMissingError | HidTransportError> =>
+const runTool = (args: string[]): Effect.Effect<string, NativeToolMissingError | HidTransportError> =>
   Effect.gen(function* () {
     const bin = yield* ensureTool();
     const { stdout } = yield* Effect.tryPromise({
@@ -127,12 +111,7 @@ const parseOutput = <T>(stdout: string): Effect.Effect<T, HidTransportError> =>
       );
     }
 
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      "ok" in parsed &&
-      (parsed as HidErrorOutput).ok === false
-    ) {
+    if (typeof parsed === "object" && parsed !== null && "ok" in parsed && (parsed as HidErrorOutput).ok === false) {
       const failed = parsed as HidErrorOutput;
       return yield* Effect.fail(
         new HidTransportError({
@@ -147,10 +126,7 @@ const parseOutput = <T>(stdout: string): Effect.Effect<T, HidTransportError> =>
   });
 
 /** 枚举全部 HID 接口元数据 */
-export const listDevices = (): Effect.Effect<
-  HidDeviceInfo[],
-  NativeToolMissingError | HidTransportError
-> =>
+export const listDevices = (): Effect.Effect<HidDeviceInfo[], NativeToolMissingError | HidTransportError> =>
   Effect.gen(function* () {
     const stdout = yield* runTool(["list", "--json"]);
     const output = yield* parseOutput<HidListOutput>(stdout);
