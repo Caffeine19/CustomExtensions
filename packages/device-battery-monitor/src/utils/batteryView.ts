@@ -9,9 +9,9 @@ import type {
 import type { HidDeviceInfo } from "../types/hid";
 import { formatHexDump } from "./hex";
 
-/** 电量颜色阈值：≥60 绿 / 20-59 黄 / <20 红 */
+/** 电量颜色阈值：≥20 绿 / 10-19 黄 / <10 红 */
 export const batteryColor = (level: number): Color =>
-  level >= 60 ? Color.Green : level >= 20 ? Color.Yellow : Color.Red;
+  level >= 20 ? Color.Green : level >= 10 ? Color.Yellow : Color.Red;
 
 /** 读数超过该时长视为过期（毫秒） */
 const STALE_AFTER_MS = 5 * 60 * 1000;
