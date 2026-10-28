@@ -736,14 +736,14 @@ importers:
         specifier: ^5.8.2
         version: 5.9.3
 
-  packages/universol-control:
+  packages/universal-control:
     dependencies:
       '@raycast/api':
         specifier: ^1.104.19
-        version: 1.104.19(@types/node@22.19.17)(@types/react@19.0.10)
+        version: 1.104.25(@types/node@22.19.17)(@types/react@19.0.10)
       '@raycast/utils':
         specifier: ^1.17.0
-        version: 1.19.1(@raycast/api@1.104.19(@types/node@22.19.17)(@types/react@19.0.10))
+        version: 1.19.1(@raycast/api@1.104.25(@types/node@22.19.17)(@types/react@19.0.10))
     devDependencies:
       '@raycast/eslint-config':
         specifier: ^2.0.4

@@ -61,8 +61,8 @@
       "path": "../packages/spark",
     },
     {
-      "name": "universol-control",
-      "path": "../packages/universol-control",
+      "name": "universal-control",
+      "path": "../packages/universal-control",
     },
     {
       "name": "which-key",
