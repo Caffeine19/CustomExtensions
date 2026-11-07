@@ -1,4 +1,3 @@
-// ── VS Code Recent Project Entry Types ──────────────────────────────────────
 // Mirrors the structure stored in VS Code's state.vscdb under
 // 'history.recentlyOpenedPathsList'
 
@@ -35,8 +34,6 @@ export type EntryLike = FolderEntry | FileEntry | WorkspaceEntry | RemoteEntry |
 export type RecentEntries = {
   entries: string;
 };
-
-// ── Resolved project for UI ─────────────────────────────────────────────────
 
 export interface RecentProject {
   name: string;

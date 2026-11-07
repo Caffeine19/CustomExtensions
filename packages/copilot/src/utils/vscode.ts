@@ -1,7 +1,5 @@
 import { getPreferenceValues } from "@raycast/api";
 
-// ── Preferences ──────────────────────────────────────────────────────────────
-
 export function getVariant(): "insiders" | "stable" {
   const prefs = getPreferenceValues();
   return prefs.vscodeVariant;

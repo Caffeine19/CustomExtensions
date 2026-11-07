@@ -22,8 +22,6 @@ import { useAllSessions } from "./utils/use-all-sessions";
 
 dayjs.extend(relativeTime);
 
-// ── Status config ────────────────────────────────────────────────────────────
-
 const STATUS_CONFIG: Record<ChatStatus, { label: string; icon: Icon; color: Color }> = {
   empty: { label: "Empty", icon: Icon.Circle, color: Color.SecondaryText },
   "in-progress": { label: "Active", icon: Icon.CircleProgress, color: Color.Blue },
@@ -34,8 +32,6 @@ const STATUS_CONFIG: Record<ChatStatus, { label: string; icon: Icon; color: Colo
 };
 
 const ACTIVE_STATUSES: ChatStatus[] = ["in-progress", "needs-input", "failed"];
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function isActive(session: ResolvedChatSession): boolean {
   return ACTIVE_STATUSES.includes(session.chatStatus);
@@ -109,8 +105,6 @@ function SessionItem({ session, showWorkspace = false }: { session: ResolvedChat
     />
   );
 }
-
-// ── Component ────────────────────────────────────────────────────────────────
 
 export default function Command() {
   const { sessions, isLoading, revalidate } = useAllSessions();

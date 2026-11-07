@@ -13,8 +13,6 @@ import { SessionReadError, VSCodeLaunchError } from "../types/errors";
 import { ChatSessionIndex, ChatStatus, ResolvedChatSession, VSCodeVariant } from "../types/session";
 import { getCliCommand, getScheme, getVariant } from "./vscode";
 
-// ── Preferences ──────────────────────────────────────────────────────────────
-
 function getAppSupportDir(variant: VSCodeVariant): string {
   const home = homedir();
   switch (variant) {
@@ -28,8 +26,6 @@ function getAppSupportDir(variant: VSCodeVariant): string {
 function getWorkspaceStorageDir(variant: VSCodeVariant): string {
   return join(getAppSupportDir(variant), "User/workspaceStorage");
 }
-
-// ── Workspace info ───────────────────────────────────────────────────────────
 
 interface WorkspaceInfo {
   hash: string;
@@ -61,8 +57,6 @@ function readWorkspaceInfo(wsDir: string): WorkspaceInfo | null {
     return null;
   }
 }
-
-// ── Session index (state.vscdb) ─────────────────────────────────────────
 
 // Reads session metadata from the `chat.ChatSessionStore.index` entry that
 // VS Code maintains in each workspace's `state.vscdb` (written by
@@ -166,8 +160,6 @@ function readIndexValuesViaSqliteCli(databases: Map<string, string>): Map<string
   return values;
 }
 
-// ── Archived session IDs (still from state.vscdb) ────────────────────────────
-
 interface AgentSessionCacheEntry {
   resource: string;
   archived?: boolean;
@@ -200,8 +192,6 @@ function readArchivedSessionIds(dbPath: string): Set<string> {
   }
   return archived;
 }
-
-// ── Chat status derivation ───────────────────────────────────────────────────
 
 // Any real AI response (even the fastest network round-trip + inference) takes well
 // over 1 second. We use this threshold to distinguish "serialized while in-progress"
@@ -273,8 +263,6 @@ function deriveChatStatus(
 
   return "completed";
 }
-
-// ── Waiting-for-input detection (session JSONL op log) ──────────────────────
 
 // A session that is waiting for the user to answer a question (askQuestions carousel), confirm
 // an action or fill an elicitation is invisible in the chat.ChatSessionStore.index:
@@ -432,8 +420,6 @@ function isWaitingForInput(sessionFilePath: string): boolean {
   }
 }
 
-// ── Load all sessions ────────────────────────────────────────────────────────
-
 function loadSessionsFromIndex(variant: VSCodeVariant): Effect.Effect<ResolvedChatSession[], SessionReadError> {
   return Effect.try({
     try: () => {
@@ -536,8 +522,6 @@ export function rehydrateSessionDates(session: ResolvedChatSession): ResolvedCha
     lastMessageDate: dayjs(session.lastMessageDate),
   };
 }
-
-// ── Open session ─────────────────────────────────────────────────────────────
 
 /**
  * Build a VS Code deep link URL for a chat session.

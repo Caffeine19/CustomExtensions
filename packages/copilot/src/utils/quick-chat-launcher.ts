@@ -5,8 +5,6 @@ import { Effect } from "effect";
 import { EmptyPromptError, VSCodeLaunchError } from "../types/errors";
 import { getCliCommand } from "./vscode";
 
-// ── Types ────────────────────────────────────────────────────────────────────
-
 export interface QuickChatParams {
   prompt: string;
   mode: "agent" | "ask" | "edit";
@@ -14,8 +12,6 @@ export interface QuickChatParams {
   workspaceType?: "folder" | "workspace" | "file";
   addFiles?: string[];
 }
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function isWorkspaceFile(params: QuickChatParams): boolean {
   return (
@@ -27,8 +23,6 @@ function runCli(cliCommand: string, args: string[], options?: Record<string, unk
   // Pass args as an argv array (no shell) so spaces, quotes or `$` in paths and prompts can never break the command.
   execFileSync(cliCommand, args, { timeout: 5000, stdio: "ignore", ...options });
 }
-
-// ── Core logic ───────────────────────────────────────────────────────────────
 
 /**
  * Build the `code chat` arguments.
@@ -48,8 +42,6 @@ function buildChatArgs(params: QuickChatParams): string[] {
 
   return args;
 }
-
-// ── Main launcher ────────────────────────────────────────────────────────────
 
 /**
  * Launch a quick chat session with GitHub Copilot via VS Code.
