@@ -42,6 +42,15 @@ export const weekdayLabel = (date: dayjs.Dayjs): string =>
   date.locale("zh-cn").format("ddd");
 
 /**
+ * Short weekday label in "Day N" format, Day 1 = Monday ... Day 7 = Sunday (Day 3 = Wednesday)
+ *
+ * @param date - the date to label
+ * @returns the "Day N" weekday label
+ */
+export const dayNumberLabel = (date: dayjs.Dayjs): string =>
+  `Day ${date.isoWeekday()}`;
+
+/**
  * Relative label of a date compared to today
  *
  * @param date - the date to label

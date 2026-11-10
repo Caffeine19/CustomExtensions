@@ -11,6 +11,7 @@ import dayjs from "dayjs";
 
 import {
   DEFAULT_FORMAT,
+  dayNumberLabel,
   formatDay,
   getCurrentWeekDays,
   relativeLabel,
@@ -21,7 +22,7 @@ export default function Command() {
   const { format, listFormat } = getPreferenceValues();
   const menuBarDateFormat = format || DEFAULT_FORMAT;
   const listDateFormat = listFormat || DEFAULT_FORMAT;
-  const dateText = formatDay(dayjs(), menuBarDateFormat);
+  const dateText = `${formatDay(dayjs(), menuBarDateFormat)} · ${dayNumberLabel(dayjs())}`;
 
   const weekDays = getCurrentWeekDays();
 
