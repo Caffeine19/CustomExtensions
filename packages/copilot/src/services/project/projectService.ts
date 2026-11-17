@@ -3,9 +3,9 @@ import { existsSync } from "fs";
 import { homedir } from "os";
 import { join } from "path";
 
-import { Effect, pipe } from "effect";
+import { Effect, pipe, Result } from "effect";
 
-import { RecentProjectsError } from "../types/errors";
+import { RecentProjectsError } from "../../types/errors";
 import {
   EntryLike,
   FileEntry,
@@ -13,8 +13,9 @@ import {
   RecentEntries,
   RecentProject,
   WorkspaceEntry,
-} from "../types/recent-projects";
-import { getVariant } from "./vscode";
+} from "../../types/recentProjects";
+import { parseJson } from "../../utils/parseJson";
+import { type VSCodeVariant, getAppSupportDir, getVariant } from "../../utils/vscode";
 
 const isFolderEntry = (entry: EntryLike): entry is FolderEntry => "folderUri" in entry;
 
@@ -27,9 +28,9 @@ const isFileEntry = (entry: EntryLike): entry is FileEntry => "fileUri" in entry
  * VS Code 1.118+ moved `history.recentlyOpenedPathsList` from `globalStorage/state.vscdb` (APPLICATION scope) to
  * `~/.<sharedDataFolderName>/sharedStorage/state.vscdb` (APPLICATION_SHARED scope).
  */
-const sharedDataFolderNames: Record<string, string> = {
-  "Code - Insiders": ".vscode-insiders-shared",
-  Code: ".vscode-shared",
+const sharedDataFolderNames: Record<VSCodeVariant, string> = {
+  insiders: ".vscode-insiders-shared",
+  stable: ".vscode-shared",
 };
 
 /**
@@ -38,17 +39,13 @@ const sharedDataFolderNames: Record<string, string> = {
  */
 const getDbPath = (): string => {
   const variant = getVariant();
-  const build = variant === "insiders" ? "Code - Insiders" : "Code";
 
-  const sharedFolder = sharedDataFolderNames[build];
-  if (sharedFolder) {
-    const sharedPath = join(homedir(), sharedFolder, "sharedStorage/state.vscdb");
-    if (existsSync(sharedPath)) {
-      return sharedPath;
-    }
+  const sharedPath = join(homedir(), sharedDataFolderNames[variant], "sharedStorage/state.vscdb");
+  if (existsSync(sharedPath)) {
+    return sharedPath;
   }
 
-  return join(homedir(), "Library/Application Support", build, "User/globalStorage/state.vscdb");
+  return join(getAppSupportDir(variant), "User/globalStorage/state.vscdb");
 };
 
 const SQL_QUERY =
@@ -56,22 +53,31 @@ const SQL_QUERY =
 
 /** Query VS Code's SQLite database for recent entries via `sqlite3` CLI. */
 const queryRecentEntries = (dbPath: string): Effect.Effect<EntryLike[], RecentProjectsError> =>
-  Effect.async<EntryLike[], RecentProjectsError>((resume) => {
+  Effect.callback<string, RecentProjectsError>((resume) => {
     execFile("/usr/bin/sqlite3", ["-json", dbPath, SQL_QUERY], { encoding: "utf-8" }, (error, stdout) => {
       if (error) {
         resume(Effect.fail(new RecentProjectsError({ message: "Failed to query VS Code database", cause: error })));
         return;
       }
-
-      try {
-        const rows = JSON.parse(stdout.trim() || "[]") as RecentEntries[];
-        const entries = rows.length > 0 && rows[0].entries ? (JSON.parse(rows[0].entries) as EntryLike[]) : [];
-        resume(Effect.succeed(entries));
-      } catch (parseError) {
-        resume(Effect.fail(new RecentProjectsError({ message: "Failed to parse recent entries", cause: parseError })));
-      }
+      resume(Effect.succeed(stdout));
     });
-  });
+  }).pipe(
+    Effect.flatMap((stdout) => {
+      const rows = parseJson<RecentEntries[]>(stdout.trim() || "[]");
+      if (Result.isFailure(rows)) {
+        return Effect.fail(new RecentProjectsError({ message: "Failed to parse recent entries", cause: rows.failure }));
+      }
+      const entries = rows.success[0]?.entries;
+      if (!entries) return Effect.succeed([]);
+      const parsed = parseJson<EntryLike[]>(entries);
+      if (Result.isFailure(parsed)) {
+        return Effect.fail(
+          new RecentProjectsError({ message: "Failed to parse recent entries", cause: parsed.failure }),
+        );
+      }
+      return Effect.succeed(parsed.success);
+    }),
+  );
 
 /** Extract the file URI from an entry, if applicable. */
 const entryToUri = (entry: EntryLike): string | undefined => {

@@ -1,23 +1,38 @@
 import { Action, ActionPanel, Form, Icon, Toast, closeMainWindow, showToast } from "@raycast/api";
 import { FormValidation, useForm, usePromise } from "@raycast/utils";
 
-import { Effect } from "effect";
-import { isLeft } from "effect/Either";
+import { Effect, Result } from "effect";
 
-import { QuickChatParams, launchQuickChat } from "./utils/quick-chat-launcher";
-import { fetchRecentProjects } from "./utils/recent-projects";
+import { fetchRecentProjects } from "./services/project/projectService";
+import { QuickChatParams, launchQuickChat } from "./services/sessions/local/localSessionService";
 
 type FormValues = Omit<QuickChatParams, "workspace" | "workspaceType" | "addFiles"> & {
-  workspace: string;
+  // Dropdown yields a string path; the FilePicker fallback yields a string[].
+  workspace: string | string[];
   files: string[];
 };
 
 export default function Command() {
-  const { data: recentProjects, isLoading } = usePromise(() => Effect.runPromise(fetchRecentProjects()), []);
+  const { data: recentProjects, isLoading } = usePromise(async () => {
+    const result = await Effect.runPromise(Effect.result(fetchRecentProjects()));
+    if (Result.isFailure(result)) {
+      await showToast({
+        style: Toast.Style.Failure,
+        title: "Failed to load recent projects",
+        message: result.failure.message,
+      });
+      return [];
+    }
+    return result.success;
+  }, []);
+
+  const projects = recentProjects ?? [];
 
   const { handleSubmit, itemProps } = useForm<FormValues>({
     async onSubmit(values) {
-      const { prompt, mode, workspace, files } = values;
+      const { prompt, mode, files } = values;
+      // FilePicker values arrive as an array even with allowMultipleSelection=false.
+      const workspace = Array.isArray(values.workspace) ? values.workspace[0] : values.workspace;
 
       await closeMainWindow();
 
@@ -25,8 +40,8 @@ export default function Command() {
       const selectedProject = projects.find((p) => p.path === workspace);
       const workspaceType = selectedProject?.entryType;
 
-      const either = await Effect.runPromise(
-        Effect.either(
+      const result = await Effect.runPromise(
+        Effect.result(
           launchQuickChat({
             prompt: prompt.trim(),
             mode,
@@ -37,11 +52,11 @@ export default function Command() {
         ),
       );
 
-      if (isLeft(either)) {
+      if (Result.isFailure(result)) {
         await showToast({
           style: Toast.Style.Failure,
           title: "Failed to launch chat",
-          message: either.left.message,
+          message: result.failure.message,
         });
         return;
       }
@@ -56,8 +71,6 @@ export default function Command() {
       prompt: FormValidation.Required,
     },
   });
-
-  const projects = recentProjects ?? [];
 
   return (
     <Form

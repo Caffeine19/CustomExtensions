@@ -12,21 +12,21 @@
   "license": "MIT",
   "commands": [
     {
-      "name": "list-chat-sessions",
+      "name": "listChatSessions",
       "title": "List Chat Sessions",
       "subtitle": "VS Code Copilot",
       "description": "Browse all local VS Code Copilot chat sessions and open them in their workspace.",
       "mode": "view"
     },
     {
-      "name": "quick-chat",
+      "name": "quickChat",
       "title": "Quick Chat",
       "subtitle": "GitHub Copilot",
       "description": "Start a quick GitHub Copilot chat session from Raycast.",
       "mode": "view"
     },
     {
-      "name": "active-sessions-menubar",
+      "name": "activeSessionsMenubar",
       "title": "Active Sessions in Menu Bar",
       "subtitle": "VS Code Copilot",
       "description": "Show active VS Code Copilot chat sessions in the macOS menu bar.",
@@ -54,6 +54,28 @@
       ]
     },
     {
+      "name": "sessionScope",
+      "title": "Session Scope",
+      "description": "Which sessions to show: local VS Code chat sessions, Copilot Harness sessions (via the VS Code Agent Host), or both.",
+      "type": "dropdown",
+      "required": false,
+      "default": "all",
+      "data": [
+        {
+          "title": "All (Local + Copilot)",
+          "value": "all"
+        },
+        {
+          "title": "Copilot Harness Only",
+          "value": "copilot"
+        },
+        {
+          "title": "Local Only",
+          "value": "local"
+        }
+      ]
+    },
+    {
       "name": "menubarDisplayMode",
       "title": "Menu Bar Display Mode",
       "description": "Detailed status counts or a compact total number.",
@@ -73,10 +95,12 @@
     }
   ],
   "dependencies": {
+    "@microsoft/agent-host-protocol": "^1.0.0",
     "@raycast/api": "^1.104.9",
     "@raycast/utils": "^1.17.0",
     "dayjs": "^1.11.13",
-    "effect": "^3.19.19",
+    "drizzle-orm": "1.0.0-rc.5",
+    "effect": "^4.1.4",
     "radash": "^12.1.1"
   },
   "devDependencies": {
