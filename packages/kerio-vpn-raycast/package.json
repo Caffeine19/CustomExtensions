@@ -1,0 +1,45 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "kerio-vpn",
+  "title": "Kerio VPN",
+  "description": "Toggle Kerio Control VPN and show its current status in Raycast search.",
+  "icon": "extension_icon.png",
+  "author": "local",
+  "license": "MIT",
+  "categories": [
+    "System"
+  ],
+  "platforms": [
+    "macOS"
+  ],
+  "commands": [
+    {
+      "name": "status",
+      "title": "Kerio VPN Status",
+      "subtitle": "Checking status...",
+      "description": "Show and refresh the current Kerio VPN status.",
+      "mode": "no-view",
+      "interval": "1m"
+    },
+    {
+      "name": "toggle-connection",
+      "title": "Toggle Kerio VPN",
+      "description": "Connect, disconnect, or cancel a stalled Kerio VPN attempt. Pauses Tailscale while Kerio is connected and restores it after; closes the Kerio TOTP tab in Edge after connecting.",
+      "mode": "no-view"
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "1.104.25",
+    "radash": "^12.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.17",
+    "@types/react": "19.2.13",
+    "typescript": "5.9.3"
+  },
+  "scripts": {
+    "build": "ray build",
+    "dev": "ray develop",
+    "typecheck": "tsc --noEmit"
+  }
+}
