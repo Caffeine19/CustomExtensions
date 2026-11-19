@@ -1,9 +1,9 @@
-import { execFile } from "node:child_process";
-import { open } from "node:fs/promises";
-import { homedir, uptime } from "node:os";
-import { join } from "node:path";
-import { setTimeout } from "node:timers/promises";
-import { promisify } from "node:util";
+import { execFile } from "child_process";
+import { open } from "fs/promises";
+import { homedir, uptime } from "os";
+import { join } from "path";
+import { setTimeout } from "timers/promises";
+import { promisify } from "util";
 import { tryit } from "radash";
 import { createTotpCleanupConcern } from "./edge";
 import { createSecoClientConcern } from "./secoclient";

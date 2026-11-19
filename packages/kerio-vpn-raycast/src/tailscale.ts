@@ -1,7 +1,7 @@
-import { execFile } from "node:child_process";
-import { access, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { promisify } from "node:util";
+import { execFile } from "child_process";
+import { access, rm, writeFile } from "fs/promises";
+import { join } from "path";
+import { promisify } from "util";
 import { environment } from "@raycast/api";
 import { tryit } from "radash";
 import type { ToggleConcern, ToggleContext } from "./types";

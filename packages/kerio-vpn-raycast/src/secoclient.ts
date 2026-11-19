@@ -1,6 +1,6 @@
-import { execFile } from "node:child_process";
-import { setTimeout } from "node:timers/promises";
-import { promisify } from "node:util";
+import { execFile } from "child_process";
+import { setTimeout } from "timers/promises";
+import { promisify } from "util";
 import { tryit } from "radash";
 import type { ToggleConcern, ToggleContext } from "./types";
 

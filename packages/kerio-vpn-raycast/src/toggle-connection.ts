@@ -5,13 +5,11 @@ import {
   LaunchType,
   showHUD,
 } from "@raycast/api";
-import { join } from "node:path";
+import { join } from "path";
 import { tryit } from "radash";
 import { listServices, toggleKerio } from "./kerio";
 
 export default async function Command() {
-  if (environment.launchType !== LaunchType.UserInitiated) return;
-
   const [error, message] = await tryit(async () => {
     const services = await listServices();
     await closeMainWindow();
