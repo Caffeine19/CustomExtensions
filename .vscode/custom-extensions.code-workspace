@@ -57,12 +57,8 @@
       "path": "../packages/restart-without-reopen",
     },
     {
-      "name": "spark",
-      "path": "../packages/spark",
-    },
-    {
-      "name": "universal-control",
-      "path": "../packages/universal-control",
+      "name": "universol-control",
+      "path": "../packages/universol-control",
     },
     {
       "name": "which-key",
@@ -91,6 +87,10 @@
     {
       "name": "zhi-hu",
       "path": "../packages/zhi-hu",
+    },
+    {
+      "name": "restart-foremost-app",
+      "path": "../packages/restart-foremost-app",
     },
   ],
 }
