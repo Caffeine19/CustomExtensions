@@ -105,11 +105,32 @@ func getTitle(_ element: AXUIElement) -> String {
     return title as? String ?? ""
 }
 
-func collectMenuItems(_ menu: AXUIElement, path: String) {
+func getBool(_ element: AXUIElement, _ attribute: String) -> Bool? {
+    var ref: CFTypeRef?
+    guard AXUIElementCopyAttributeValue(element, attribute as CFString, &ref) == .success else { return nil }
+    return ref as? Bool
+}
+
+/// Check-state character of a menu item (AXMenuItemMarkChar), "" when unchecked.
+func markChar(_ element: AXUIElement) -> String {
+    var ref: CFTypeRef?
+    guard AXUIElementCopyAttributeValue(element, "AXMenuItemMarkChar" as CFString, &ref) == .success else { return "" }
+    return ref as? String ?? ""
+}
+
+/// Menu nesting depth cap: the recursion early-returns once the counter
+/// exceeds this value, mirroring Raycast's AppMenuBarWorker.
+let maxMenuDepth = 3
+
+func collectMenuItems(_ menu: AXUIElement, path: String, depth: Int) {
+    guard depth <= maxMenuDepth else { return }
     for item in getChildren(menu) {
         guard getRole(item) == (kAXMenuItemRole as String) else { continue }
         let title = getTitle(item)
-        guard !title.isEmpty else { continue }
+        guard !title.trimmingCharacters(in: .whitespaces).isEmpty else { continue }
+        // Skip disabled and hidden entries
+        if getBool(item, kAXEnabledAttribute as String) == false { continue }
+        if getBool(item, kAXHiddenAttribute as String) == true { continue }
 
         // Always read modifiers and glyph — not just when char exists
         var cmdModRef: CFTypeRef?
@@ -133,7 +154,10 @@ func collectMenuItems(_ menu: AXUIElement, path: String) {
 
         let key = resolveKey(cmdChar, cmdGlyph, cmdVKey)
         let shortcut: String
-        if !key.isEmpty || mod > 0 {
+        // Modifier-only "shortcuts" are AX artifacts: some macOS menu items (e.g.
+        // "Arrange in Front") report a modifier mask with no key character at all.
+        // Raycast hides those; so do we.
+        if !key.isEmpty {
             shortcut = formatMod(mod) + key
         } else {
             shortcut = ""
@@ -141,19 +165,27 @@ func collectMenuItems(_ menu: AXUIElement, path: String) {
 
         let bp = path + " -> " + title
         let subMenus = getChildren(item).filter { getRole($0) == (kAXMenuRole as String) }
-        print(bp + "|" + shortcut + "|" + (subMenus.isEmpty ? "N" : "Y"))
+        print(bp + "|" + shortcut + "|" + (subMenus.isEmpty ? "N" : "Y") + "|" + markChar(item))
 
         for sub in subMenus {
-            collectMenuItems(sub, path: bp)
+            collectMenuItems(sub, path: bp, depth: depth + 1)
         }
     }
 }
 
-guard let app = NSWorkspace.shared.runningApplications.first(where: { $0.isActive && $0.activationPolicy == .regular }),
+// Target the menu bar owning app (not necessarily the frontmost one — the two
+// differ under full screen / Stage Manager), mirroring Raycast's use of
+// NSWorkspace.menuBarOwningApplication; fall back to the active app.
+guard let app = NSWorkspace.shared.menuBarOwningApplication
+        ?? NSWorkspace.shared.runningApplications.first(where: { $0.isActive && $0.activationPolicy == .regular }),
       let name = app.localizedName else {
-    fputs("ERROR:No frontmost app\n", stderr); exit(1)
+    fputs("ERROR:No menu bar owner\n", stderr); exit(1)
 }
 fputs("APP:\(name)\n", stderr)
+fputs("PID:\(app.processIdentifier)\n", stderr)
+if let bundleId = app.bundleIdentifier {
+    fputs("BUNDLE:\(bundleId)\n", stderr)
+}
 
 let axApp = AXUIElementCreateApplication(app.processIdentifier)
 var menuBar: CFTypeRef?
@@ -168,7 +200,7 @@ for mbi in getChildren(mb as! AXUIElement) {
     guard !title.isEmpty, title != "Apple" else { continue }
     for child in getChildren(mbi) {
         if getRole(child) == (kAXMenuRole as String) {
-            collectMenuItems(child, path: title)
+            collectMenuItems(child, path: title, depth: 1)
         }
     }
 }

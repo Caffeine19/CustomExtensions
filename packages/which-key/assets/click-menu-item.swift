@@ -8,7 +8,9 @@
 // when the app isn't frontmost).
 //
 // Usage: click-menu-item.swift <AppName> <BundleId|"-"> <MenuBarItem> [submenu...] <MenuItem>
+//        click-menu-item.swift <AppName> <BundleId|"-"> <MenuBarItem>   (opens the top-level menu)
 // Example: click-menu-item.swift "Code - Insiders" "-" "Code - Insiders" "Preferences" "Settings"
+//          click-menu-item.swift "Finder" "-" "File"                    (opens the File menu)
 //          (pass "-" when the bundle id is unknown; the name is then matched against
 //           both the Info.plist name and the on-disk file name)
 //
@@ -18,7 +20,7 @@ import Cocoa
 
 // ─── Parse arguments ───
 
-guard CommandLine.arguments.count >= 4 else {
+guard CommandLine.arguments.count >= 3 else {
     fputs("Usage: click-menu-item.swift <AppName> <BundleId|\"-\"> <MenuBarItem> [submenu...] <MenuItem>\n", stderr)
     exit(1)
 }
@@ -70,14 +72,22 @@ fputs("LOG:Path segments: \(pathSegments)\n", stderr)
 //     of menu "Code - Insiders" of menu bar item "Code - Insiders" of menu bar 1
 // Path: ["File", "Save"] →
 //   menu item "Save" of menu "File" of menu bar item "File" of menu bar 1
+// Path: ["File"] →
+//   menu bar item "File" of menu bar 1   (opens the top-level menu itself)
 
-let last = pathSegments[pathSegments.count - 1]
-var ref = "menu item \"\(last)\""
+let ref: String
+if pathSegments.count == 1 {
+    ref = "menu bar item \"\(pathSegments[0])\" of menu bar 1"
+} else {
+    let last = pathSegments[pathSegments.count - 1]
+    var built = "menu item \"\(last)\""
 
-for i in stride(from: pathSegments.count - 2, through: 1, by: -1) {
-    ref += " of menu \"\(pathSegments[i])\" of menu item \"\(pathSegments[i])\""
+    for i in stride(from: pathSegments.count - 2, through: 1, by: -1) {
+        built += " of menu \"\(pathSegments[i])\" of menu item \"\(pathSegments[i])\""
+    }
+    built += " of menu \"\(pathSegments[0])\" of menu bar item \"\(pathSegments[0])\" of menu bar 1"
+    ref = built
 }
-ref += " of menu \"\(pathSegments[0])\" of menu bar item \"\(pathSegments[0])\" of menu bar 1"
 
 // ─── Execute: activate app + click menu item ───
 
