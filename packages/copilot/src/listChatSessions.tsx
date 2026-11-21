@@ -6,7 +6,7 @@ import dayjs, { type Dayjs } from "dayjs";
 import { fork, group } from "radash";
 
 import { SessionActions } from "./components/actions";
-import { STATUS_CONFIG } from "./constants/sessionStatus";
+import { AUTOMATION_BADGE, FORK_BADGE, PENDING_BADGE, STATUS_CONFIG } from "./constants/sessionStatus";
 import { useAllSessions } from "./hooks/useAllSessions";
 import { WorkspacelessCopilotSession } from "./types/sessions/copilotSession";
 import { AnySession } from "./types/sessions/session";
@@ -15,6 +15,7 @@ import {
   sessionChatStatus,
   sessionHasPendingEdits,
   sessionId,
+  sessionIsAutomation,
   sessionIsForked,
   sessionIsWorkspaceless,
   sessionLastActivity,
@@ -205,15 +206,22 @@ function SessionListItem({
 
   if (sessionHasPendingEdits(session)) {
     accessories.push({
-      icon: { source: Icon.Pencil, tintColor: Color.Orange },
-      tag: { value: "Pending", color: Color.Orange },
+      icon: { source: PENDING_BADGE.icon, tintColor: PENDING_BADGE.color },
+      tag: { value: PENDING_BADGE.label, color: PENDING_BADGE.color },
     });
   }
 
   if (sessionIsForked(session)) {
     accessories.push({
-      icon: { source: Icon.Duplicate, tintColor: Color.SecondaryText },
-      tag: { value: "Fork", color: Color.SecondaryText },
+      icon: { source: FORK_BADGE.icon, tintColor: FORK_BADGE.color },
+      tag: { value: FORK_BADGE.label, color: FORK_BADGE.color },
+    });
+  }
+
+  if (sessionIsAutomation(session)) {
+    accessories.push({
+      icon: { source: AUTOMATION_BADGE.icon, tintColor: AUTOMATION_BADGE.color },
+      tag: { value: AUTOMATION_BADGE.label, color: AUTOMATION_BADGE.color },
     });
   }
 

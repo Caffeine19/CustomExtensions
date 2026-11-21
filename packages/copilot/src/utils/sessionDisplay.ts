@@ -1,4 +1,4 @@
-import { ChatInteractivity, SessionStatus } from "@microsoft/agent-host-protocol";
+import { ChatInteractivity, SessionOriginKind, SessionStatus } from "@microsoft/agent-host-protocol";
 import dayjs, { type Dayjs } from "dayjs";
 import { Match } from "effect";
 
@@ -52,6 +52,8 @@ function mapChatStatus(status: SessionStatus): ChatStatus {
   if (status & SessionStatus.InProgress) return "in-progress";
   if (status & SessionStatus.Error) return "failed";
   if (status & SessionStatus.IsArchived) return "archived";
+  // Finished but never shown to the user ("shown read") — not done until they have seen it.
+  if (!(status & SessionStatus.IsRead)) return "unread";
   return "completed";
 }
 
@@ -163,6 +165,15 @@ export function sessionIsForked(session: AnySession): boolean {
   return Match.value(session).pipe(
     Match.when({ source: "local" }, () => false),
     Match.when({ source: "copilot" }, (s) => (s.chat.origin as { kind?: string } | undefined)?.kind === "fork"),
+    Match.exhaustive,
+  );
+}
+
+/** Whether an automation run created this session — `summary.origin` links the owning automation and run. */
+export function sessionIsAutomation(session: AnySession): boolean {
+  return Match.value(session).pipe(
+    Match.when({ source: "local" }, () => false),
+    Match.when({ source: "copilot" }, (s) => s.summary.origin?.kind === SessionOriginKind.Automation),
     Match.exhaustive,
   );
 }

@@ -14,7 +14,7 @@ import { useCachedState } from "@raycast/utils";
 import { Effect, Result } from "effect";
 import { group, sort } from "radash";
 
-import { STATUS_CONFIG } from "./constants/sessionStatus";
+import { PENDING_BADGE, STATUS_CONFIG } from "./constants/sessionStatus";
 import { useAllSessions } from "./hooks/useAllSessions";
 import { openSessionViaUriHandler } from "./services/sessions/sessionService";
 import { AnySession, ChatStatus } from "./types/sessions/session";
@@ -42,17 +42,19 @@ function menubarTitle(
   waitingCount: number,
   pendingCount: number,
   errorCount: number,
+  unreadCount: number,
   mode: MenubarDisplayMode,
 ): string {
-  if (mode === "compact") return String(waitingCount + runningCount + pendingCount + errorCount);
-
-  if (waitingCount === 0 && runningCount === 0 && pendingCount === 0 && errorCount === 0) return "None";
+  const total = waitingCount + runningCount + pendingCount + errorCount + unreadCount;
+  if (mode === "compact") return String(total);
+  if (total === 0) return "None";
 
   const counts = {
     waiting: waitingCount,
     active: runningCount,
     pending: pendingCount,
     error: errorCount,
+    unread: unreadCount,
   };
 
   const parts: string[] = [];
@@ -60,6 +62,7 @@ function menubarTitle(
   if (counts.active > 0) parts.push(`${counts.active} Active`);
   if (counts.pending > 0) parts.push(`${counts.pending} Pending`);
   if (counts.error > 0) parts.push(`${counts.error} Error`);
+  if (counts.unread > 0) parts.push(`${counts.unread} Unread`);
 
   return parts.join(" / ");
 }
@@ -70,12 +73,12 @@ function SessionItem({ session, showWorkspace = false }: { session: AnySession; 
   return (
     <MenuBarExtra.Item
       icon={{
-        source: showPending ? Icon.Pencil : statusCfg.icon,
-        tintColor: showPending ? Color.Orange : statusCfg.color,
+        source: showPending ? PENDING_BADGE.icon : statusCfg.icon,
+        tintColor: showPending ? PENDING_BADGE.color : statusCfg.color,
       }}
       title={sessionTitle(session)}
       subtitle={showWorkspace ? sessionWorkspaceName(session) : sessionLastActivity(session).fromNow()}
-      tooltip={`${showPending ? "Pending Edits · " : ""}${statusCfg.label} · ${sessionLastActivity(session).fromNow()}`}
+      tooltip={`${showPending ? `${PENDING_BADGE.label} Edits · ` : ""}${statusCfg.label} · ${sessionLastActivity(session).fromNow()}`}
       onAction={async () => {
         await closeMainWindow();
         const result = await Effect.runPromise(Effect.result(openSessionViaUriHandler(session)));
@@ -114,6 +117,8 @@ export default function Command() {
 
   const errorSessions = activeRecentSessions.filter((s) => sessionChatStatus(s) === "failed");
 
+  const unreadSessions = recentSessions.filter((s) => sessionChatStatus(s) === "unread");
+
   return (
     <MenuBarExtra
       icon={{ source: "github-copilot-dark.svg", tintColor: Color.PrimaryText }}
@@ -122,6 +127,7 @@ export default function Command() {
         waitingSessions.length,
         pendingCount,
         errorSessions.length,
+        unreadSessions.length,
         displayMode,
       )}
       tooltip="VS Code Copilot Sessions"
