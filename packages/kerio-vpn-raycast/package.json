@@ -14,6 +14,12 @@
   ],
   "commands": [
     {
+      "name": "diagnose",
+      "title": "Diagnose Kerio VPN",
+      "description": "Inspect Kerio status, IPv4 tunnels, O+Connect background service, and recent crashes.",
+      "mode": "view"
+    },
+    {
       "name": "status",
       "title": "Kerio VPN Status",
       "subtitle": "Checking status...",
@@ -30,6 +36,7 @@
   ],
   "dependencies": {
     "@raycast/api": "1.104.25",
+    "@raycast/utils": "^1.19.1",
     "radash": "^12.1.1"
   },
   "devDependencies": {

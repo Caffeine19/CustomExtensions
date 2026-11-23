@@ -2,6 +2,8 @@
 
 This local extension uses the Kerio Control VPN Client already installed on macOS.
 
+**Diagnose Kerio VPN** opens a detail view with macOS tunnel status, the latest Kerio UI log status, IPv4 tunnel interfaces and their owners, O+Connect background service state, related processes, and the latest retained Kerio crash. Use **Refresh Diagnostics** to update the snapshot, **Copy Diagnostic Report** to copy it, or **Copy O+Connect Stop Command** to copy the Terminal command when the service is running.
+
 **Kerio VPN Status** shows the connection status in its Raycast search subtitle. Run it for an immediate refresh. Raycast also schedules a read-only refresh every minute. The command displays **Checking certificate** when that is the latest state reported by the Kerio UI for an ongoing attempt.
 
 **Toggle Kerio VPN** connects or disconnects Kerio, then requests a status refresh. If Kerio still shows a pending certificate check after the tunnel exited, the command cancels that attempt in Kerio. Run it again to start a new connection.

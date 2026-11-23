@@ -4,6 +4,7 @@ import { homedir, uptime } from "os";
 import { join } from "path";
 import { setTimeout } from "timers/promises";
 import { promisify } from "util";
+import { runAppleScript } from "@raycast/utils";
 import { tryit } from "radash";
 import { createTotpCleanupConcern } from "./edge";
 import { createSecoClientConcern } from "./secoclient";
@@ -25,6 +26,57 @@ export type Service = { id: string; name: string; state: State };
 
 const serviceLine =
   /^\s*\*?\s*\(([^)]+)\)\s+([\da-f-]{36})\s+VPN\s+\(com\.kerio\.VPN\.(?:ie|fr)\.agent\)\s+"(.*)"\s+\[VPN:/i;
+
+const connectScript = /* appleScript */ `
+on run arguments
+set cancelPending to (item 1 of arguments is "cancel")
+set paneLabels to {"Kerio Control VPN Client", "Persistent connection", "持续连接"}
+set connectLabels to {"Connect", "连接"}
+set disconnectLabels to {"Disconnect", "断开"}
+
+tell application "System Events"
+    repeat 16 times
+        set settingsProcesses to every application process whose bundle identifier is "com.apple.systempreferences"
+        if (count settingsProcesses) > 0 then
+            tell item 1 of settingsProcesses
+                if exists window 1 then
+                    set paneFound to false
+                    set connectButton to missing value
+                    set disconnectButton to missing value
+                    set controls to entire contents of window 1
+                    repeat with controlRef in controls
+                        try
+                            set controlName to (name of controlRef) as text
+                            if controlName is in paneLabels then set paneFound to true
+                            if role of controlRef is "AXButton" then
+                                if controlName is in connectLabels then set connectButton to contents of controlRef
+                                if controlName is in disconnectLabels then set disconnectButton to contents of controlRef
+                            end if
+                        end try
+                    end repeat
+                    if paneFound then
+                        if disconnectButton is not missing value then
+                            if not cancelPending then return "disconnect-visible"
+                            if not (enabled of disconnectButton) then return "cancel-unavailable"
+                            click disconnectButton
+                            return "cancelled"
+                        end if
+                        if connectButton is not missing value then
+                            if cancelPending then return "cancel-unavailable"
+                            if not (enabled of connectButton) then return "needs-input"
+                            click connectButton
+                            return "clicked"
+                        end if
+                    end if
+                end if
+            end tell
+        end if
+        delay 0.3
+    end repeat
+end tell
+return "pane-not-found"
+end run
+`;
 
 export function parseServices(output: string): Service[] {
   return output.split("\n").flatMap((line) => {
@@ -163,21 +215,15 @@ async function waitForStableConnection(): Promise<boolean> {
 
 async function connectKerio(
   services: Service[],
-  script: string,
   cancelPending: boolean,
 ): Promise<string> {
   await openKerio();
   if (services.length > 1) return "Choose the VPN profile in Kerio";
-  const [execErr, result] = await tryit(async () => {
-    const { stdout } = await exec(
-      "/usr/bin/osascript",
-      [script, cancelPending ? "cancel" : "connect"],
-      {
-        timeout: 12000,
-      },
-    );
-    return stdout.trim();
-  })();
+  const [execErr, result] = await tryit(() =>
+    runAppleScript(connectScript, [cancelPending ? "cancel" : "connect"], {
+      timeout: 12000,
+    }),
+  )();
   if (execErr || result === undefined)
     return "Kerio opened. Allow Raycast Automation and Accessibility, or continue in Kerio.";
 
@@ -225,7 +271,6 @@ function createContext(phase: TogglePhase): ToggleContext {
 
 async function runToggle(
   services: Service[],
-  script: string,
   concerns: ToggleConcern[],
 ): Promise<string> {
   const status = connectionStatus(services);
@@ -249,11 +294,11 @@ async function runToggle(
     status === "Disconnected" &&
     services.length === 1 &&
     (await readCertificateAttempt()) !== undefined;
-  if (cancelPending) return connectKerio(services, script, true);
+  if (cancelPending) return connectKerio(services, true);
 
   const ctx = createContext("connect");
   for (const concern of concerns) await concern.before?.(ctx);
-  ctx.message = await connectKerio(services, script, false);
+  ctx.message = await connectKerio(services, false);
   for (const concern of concerns) await concern.after?.(ctx);
   return withNotes(ctx.message, ctx.notes);
 }
@@ -267,10 +312,7 @@ export class KerioToggle {
   private readonly concerns: ToggleConcern[] = [];
   private result?: Promise<string>;
 
-  constructor(
-    private readonly services: Service[],
-    private readonly script: string,
-  ) {}
+  constructor(private readonly services: Service[]) {}
 
   /** Quit SecoClient before connecting and reopen it once Kerio is stable. */
   withSecoClient(): this {
@@ -292,11 +334,7 @@ export class KerioToggle {
 
   /** Execute the toggle and return the HUD message. */
   run(): Promise<string> {
-    return (this.result ??= runToggle(
-      this.services,
-      this.script,
-      this.concerns,
-    ));
+    return (this.result ??= runToggle(this.services, this.concerns));
   }
 
   // Awaitable so `await toggleKerio(...).withTailscale()` resolves to the message.
@@ -308,6 +346,6 @@ export class KerioToggle {
   }
 }
 
-export function toggleKerio(services: Service[], script: string): KerioToggle {
-  return new KerioToggle(services, script);
+export function toggleKerio(services: Service[]): KerioToggle {
+  return new KerioToggle(services);
 }

@@ -1,6 +1,8 @@
 import { execFile } from "child_process";
-import { access, rm, writeFile } from "fs/promises";
+import { constants } from "fs";
+import { access, mkdir, rm, writeFile } from "fs/promises";
 import { join } from "path";
+import { setTimeout } from "timers/promises";
 import { promisify } from "util";
 import { environment } from "@raycast/api";
 import { tryit } from "radash";
@@ -8,7 +10,6 @@ import type { ToggleConcern, ToggleContext } from "./types";
 
 const exec = promisify(execFile);
 
-// Tailscale ships its CLI inside the app bundle on macOS; Homebrew installs it on PATH.
 const candidates = [
   "/Applications/Tailscale.app/Contents/MacOS/Tailscale",
   "/usr/local/bin/tailscale",
@@ -19,24 +20,34 @@ const candidates = [
 // Marker file recording that this extension paused Tailscale and should restore it later.
 const markerPath = () => join(environment.supportPath, "tailscale-paused");
 
-async function resolveTailscale(): Promise<string> {
-  for (const candidate of candidates) {
-    const [err] = await tryit(access)(candidate);
+async function resolveTailscale(): Promise<string | undefined> {
+  const pathCandidates = (process.env.PATH ?? "")
+    .split(":")
+    .filter((directory) => directory.startsWith("/"))
+    .map((directory) => join(directory, "tailscale"));
+  for (const candidate of [...new Set([...candidates, ...pathCandidates])]) {
+    const [err] = await tryit(access)(candidate, constants.X_OK);
     if (!err) return candidate;
-    // Try the next known location.
   }
-  // Fall back to whatever `tailscale` resolves to on PATH.
-  return "tailscale";
 }
 
-async function backendState(bin: string): Promise<string> {
-  const [, state] = await tryit(async () => {
-    const { stdout } = await exec(bin, ["status", "--json"], { timeout: 5000 });
-    return String(
-      (JSON.parse(stdout) as { BackendState?: string }).BackendState ?? "",
-    );
-  })();
-  return state ?? "";
+function runTailscale(bin: string, args: string[], timeout: number) {
+  return exec(bin, args, {
+    timeout,
+    env: { ...process.env, TAILSCALE_BE_CLI: "1" },
+  });
+}
+
+async function backendState(bin: string, timeout = 5000): Promise<string> {
+  const { stdout } = await runTailscale(bin, ["status", "--json"], timeout);
+  const { BackendState } = JSON.parse(stdout) as { BackendState?: string };
+  if (!BackendState)
+    throw new Error("Tailscale did not report its backend state.");
+  return BackendState;
+}
+
+function isActive(state: string): boolean {
+  return state === "Running" || state === "Starting";
 }
 
 /**
@@ -46,12 +57,41 @@ async function backendState(bin: string): Promise<string> {
  */
 export async function suspendTailscale(): Promise<string | undefined> {
   const bin = await resolveTailscale();
-  if ((await backendState(bin)) !== "Running") return undefined;
-  const [err] = await tryit(async () => {
-    await exec(bin, ["down"], { timeout: 10000 });
+  if (!bin) return;
+  const [statusError, state] = await tryit(backendState)(bin);
+  if (statusError || !state) {
+    throw new Error(
+      "Could not read Tailscale status. Check Tailscale before connecting Kerio.",
+    );
+  }
+  if (!isActive(state)) return;
+
+  const [pauseError] = await tryit(async () => {
+    await mkdir(environment.supportPath, { recursive: true });
     await writeFile(markerPath(), "");
+    await runTailscale(bin, ["down"], 10000);
+    const deadline = Date.now() + 10000;
+    while (Date.now() < deadline) {
+      if (
+        !isActive(
+          await backendState(
+            bin,
+            Math.min(3000, Math.max(1, deadline - Date.now())),
+          ),
+        )
+      ) {
+        return;
+      }
+      await setTimeout(300);
+    }
+    throw new Error("Timed out waiting for Tailscale to stop.");
   })();
-  return err ? undefined : "Tailscale disconnected";
+  if (pauseError) {
+    throw new Error(
+      "Could not confirm Tailscale disconnected. Check Tailscale before connecting Kerio.",
+    );
+  }
+  return "Tailscale disconnected";
 }
 
 /**
@@ -63,19 +103,18 @@ export async function resumeTailscale(): Promise<string | undefined> {
   const [markerErr] = await tryit(access)(marker);
   if (markerErr) return undefined; // We never paused Tailscale; leave it alone.
   const bin = await resolveTailscale();
-  if ((await backendState(bin)) === "Running") {
+  const [err, reconnected] = await tryit(async () => {
+    if (!bin) throw new Error("Tailscale CLI not found.");
+    const alreadyRunning = (await backendState(bin)) === "Running";
+    if (!alreadyRunning) await runTailscale(bin, ["up"], 15000);
     await rm(marker, { force: true });
-    return undefined; // Already connected.
-  }
-  const [err] = await tryit(async () => {
-    await exec(bin, ["up"], { timeout: 15000 });
-    await rm(marker, { force: true });
+    return !alreadyRunning;
   })();
   if (err) {
     // Leave the marker in place so a later Kerio disconnect can retry.
     return "Tailscale could not reconnect; enable it in Tailscale if needed.";
   }
-  return "Tailscale reconnected";
+  return reconnected ? "Tailscale reconnected" : undefined;
 }
 
 /**

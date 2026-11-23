@@ -13,6 +13,8 @@ type ExtensionPreferences = {};
 declare type Preferences = ExtensionPreferences;
 
 declare namespace Preferences {
+  /** Preferences accessible in the `diagnose` command */
+  export type Diagnose = ExtensionPreferences & {};
   /** Preferences accessible in the `status` command */
   export type Status = ExtensionPreferences & {};
   /** Preferences accessible in the `toggle-connection` command */
@@ -20,6 +22,8 @@ declare namespace Preferences {
 }
 
 declare namespace Arguments {
+  /** Arguments passed to the `diagnose` command */
+  export type Diagnose = {};
   /** Arguments passed to the `status` command */
   export type Status = {};
   /** Arguments passed to the `toggle-connection` command */

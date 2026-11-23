@@ -490,6 +490,9 @@ importers:
       '@raycast/api':
         specifier: 1.104.25
         version: 1.104.25(@types/node@22.19.17)(@types/react@19.2.13)
+      '@raycast/utils':
+        specifier: ^1.19.1
+        version: 1.19.1(@raycast/api@1.104.25(@types/node@22.19.17)(@types/react@19.2.13))
       radash:
         specifier: ^12.1.1
         version: 12.1.1
@@ -7465,6 +7468,18 @@ snapshots:
   '@raycast/utils@1.19.1(@raycast/api@1.104.25(@types/node@22.19.17)(@types/react@19.0.10))':
     dependencies:
       '@raycast/api': 1.104.25(@types/node@22.19.17)(@types/react@19.0.10)
+      cross-fetch: 3.2.0
+      dequal: 2.0.3
+      object-hash: 3.0.0
+      signal-exit: 4.1.0
+      stream-chain: 2.2.5
+      stream-json: 1.9.1
+    transitivePeerDependencies:
+      - encoding
+
+  '@raycast/utils@1.19.1(@raycast/api@1.104.25(@types/node@22.19.17)(@types/react@19.2.13))':
+    dependencies:
+      '@raycast/api': 1.104.25(@types/node@22.19.17)(@types/react@19.2.13)
       cross-fetch: 3.2.0
       dequal: 2.0.3
       object-hash: 3.0.0
