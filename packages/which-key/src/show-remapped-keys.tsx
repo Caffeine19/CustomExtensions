@@ -5,6 +5,7 @@ import {
   Color,
   confirmAlert,
   getApplications,
+  getFrontmostApplication,
   Icon,
   Image,
   List,
@@ -12,7 +13,7 @@ import {
   Toast,
 } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { loadRemaps, removeRemap } from "./utils/remapStore";
 import type { RemapEntry } from "./utils/remapStore";
 import {
@@ -29,12 +30,19 @@ import { formatShortcut } from "./utils/search";
 import RemapForm from "./components/RemapForm";
 import type { RemapTarget } from "./components/RemapForm";
 
+const FRONTMOST_POLL_MS = 1000;
+
+interface RemapGroup {
+  title: string;
+  items: RemapEntry[];
+}
+
 export default function Command() {
   const { data: remaps, isLoading, revalidate } = useCachedPromise(loadRemaps, [], { keepPreviousData: true });
   const { data: applications } = useCachedPromise(getApplications, [], { keepPreviousData: true });
 
   // Group remaps by application name, sorted: sections by app name, items by menu path
-  const groups = useMemo(() => {
+  const groups = useMemo<RemapGroup[]>(() => {
     const map = new Map<string, RemapEntry[]>();
     for (const entry of remaps ?? []) {
       const group = map.get(entry.app);
@@ -46,6 +54,37 @@ export default function Command() {
       items: [...items].sort((a, b) => a.breadcrumb.localeCompare(b.breadcrumb)),
     })).sort((a, b) => a.title.localeCompare(b.title));
   }, [remaps]);
+
+  // Track the app behind Raycast so its remaps can be pinned to the top.
+  const [frontmost, setFrontmost] = useState<{ name: string; bundleId?: string }>();
+
+  useEffect(() => {
+    let cancelled = false;
+    const refresh = async () => {
+      try {
+        const app = await getFrontmostApplication();
+        if (!cancelled) setFrontmost({ name: app.name, bundleId: app.bundleId });
+      } catch {
+        // Transient focus errors — keep the last known app.
+      }
+    };
+    void refresh();
+    const timer = setInterval(() => void refresh(), FRONTMOST_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, []);
+
+  const { currentGroup, otherGroups } = useMemo(() => {
+    const needle = frontmost?.name.toLowerCase();
+    const current = groups.find(
+      (g) =>
+        (!!needle && g.title.toLowerCase() === needle) ||
+        (!!frontmost?.bundleId && g.items.some((i) => i.bundleId === frontmost.bundleId)),
+    );
+    return { currentGroup: current, otherGroups: groups.filter((g) => g !== current) };
+  }, [groups, frontmost]);
 
   // Verify each remap against what is actually written in the app's defaults domain
   const bundleKey = useMemo(() => [...new Set((remaps ?? []).map((r) => r.bundleId))].join(","), [remaps]);
@@ -170,81 +209,80 @@ export default function Command() {
     await promptRestartApps(appliedApps);
   };
 
+  const renderGroup = (group: RemapGroup, sectionTitle: string) => (
+    <List.Section key={group.title} title={sectionTitle}>
+      {group.items.map((entry) => {
+        const status = checkStatus(entry, keyEquivs?.[entry.bundleId]);
+        return (
+          <List.Item
+            key={`${entry.bundleId}-${entry.menu}`}
+            icon={iconFor(entry)}
+            title={entry.breadcrumb}
+            subtitle={{ value: STATUS_LABEL[status], tooltip: statusTooltip(entry, status) }}
+            // Pre-remap shortcut (gray) before the current one, in standard ⌃⌥⇧⌘ order
+            accessories={[
+              ...(entry.originalShortcut !== undefined
+                ? [
+                    {
+                      tag: {
+                        value: entry.originalShortcut ? formatShortcut(entry.originalShortcut) : "—",
+                        color: Color.SecondaryText,
+                      },
+                    },
+                  ]
+                : []),
+              { tag: { value: formatShortcut(entry.shortcut), color: Color.Green } },
+            ]}
+            actions={
+              <ActionPanel>
+                <ActionPanel.Section>
+                  <Action title="Run Menu Item" icon={Icon.Play} onAction={() => handleRun(entry)} />
+                  <Action.Push title="Edit Remap" icon={Icon.Pencil} target={<RemapForm target={toTarget(entry)} />} />
+                </ActionPanel.Section>
+                <ActionPanel.Section title="Re-Apply & Status">
+                  <Action
+                    title="Re-Apply Shortcut"
+                    icon={Icon.RotateClockwise}
+                    onAction={() => handleReapply([entry])}
+                  />
+                  <Action
+                    title="Re-Apply Shortcuts for This App"
+                    icon={Icon.Repeat}
+                    onAction={() => handleReapply(remaps?.filter((r) => r.bundleId === entry.bundleId) ?? [])}
+                  />
+                  <Action
+                    title="Re-Apply All Shortcuts"
+                    icon={Icon.ArrowClockwise}
+                    onAction={() => handleReapply(remaps ?? [])}
+                  />
+                  <Action title="Check Status" icon={Icon.CheckCircle} onAction={() => revalidateStatus()} />
+                </ActionPanel.Section>
+                <ActionPanel.Section title="Copy">
+                  <Action.CopyToClipboard title="Copy Menu Path" content={entry.breadcrumb} />
+                  <Action.CopyToClipboard title="Copy Shortcut" content={formatShortcut(entry.shortcut)} />
+                  <Action.CopyToClipboard title="Copy Encoded Value" content={entry.encoded} />
+                </ActionPanel.Section>
+                <ActionPanel.Section>
+                  <Action
+                    title="Remove Remap"
+                    icon={Icon.Trash}
+                    style={Action.Style.Destructive}
+                    shortcut={{ modifiers: ["ctrl"], key: "x" }}
+                    onAction={() => handleRemove(entry)}
+                  />
+                </ActionPanel.Section>
+              </ActionPanel>
+            }
+          />
+        );
+      })}
+    </List.Section>
+  );
+
   return (
     <List isLoading={isLoading || isLoadingStatus} searchBarPlaceholder="Search remapped shortcuts…" throttle>
-      {groups.map((group) => (
-        <List.Section key={group.title} title={`${group.title} (${group.items.length})`}>
-          {group.items.map((entry) => {
-            const status = checkStatus(entry, keyEquivs?.[entry.bundleId]);
-            return (
-              <List.Item
-                key={`${entry.bundleId}-${entry.menu}`}
-                icon={iconFor(entry)}
-                title={entry.breadcrumb}
-                subtitle={{ value: STATUS_LABEL[status], tooltip: statusTooltip(entry, status) }}
-                // Pre-remap shortcut (gray) before the current one, in standard ⌃⌥⇧⌘ order
-                accessories={[
-                  ...(entry.originalShortcut !== undefined
-                    ? [
-                        {
-                          tag: {
-                            value: entry.originalShortcut ? formatShortcut(entry.originalShortcut) : "—",
-                            color: Color.SecondaryText,
-                          },
-                        },
-                      ]
-                    : []),
-                  { tag: { value: formatShortcut(entry.shortcut), color: Color.Green } },
-                ]}
-                actions={
-                  <ActionPanel>
-                    <ActionPanel.Section>
-                      <Action title="Run Menu Item" icon={Icon.Play} onAction={() => handleRun(entry)} />
-                      <Action.Push
-                        title="Edit Remap"
-                        icon={Icon.Pencil}
-                        target={<RemapForm target={toTarget(entry)} />}
-                      />
-                    </ActionPanel.Section>
-                    <ActionPanel.Section title="Re-Apply & Status">
-                      <Action
-                        title="Re-Apply Shortcut"
-                        icon={Icon.RotateClockwise}
-                        onAction={() => handleReapply([entry])}
-                      />
-                      <Action
-                        title="Re-Apply Shortcuts for This App"
-                        icon={Icon.Repeat}
-                        onAction={() => handleReapply(remaps?.filter((r) => r.bundleId === entry.bundleId) ?? [])}
-                      />
-                      <Action
-                        title="Re-Apply All Shortcuts"
-                        icon={Icon.ArrowClockwise}
-                        onAction={() => handleReapply(remaps ?? [])}
-                      />
-                      <Action title="Check Status" icon={Icon.CheckCircle} onAction={() => revalidateStatus()} />
-                    </ActionPanel.Section>
-                    <ActionPanel.Section title="Copy">
-                      <Action.CopyToClipboard title="Copy Menu Path" content={entry.breadcrumb} />
-                      <Action.CopyToClipboard title="Copy Shortcut" content={formatShortcut(entry.shortcut)} />
-                      <Action.CopyToClipboard title="Copy Encoded Value" content={entry.encoded} />
-                    </ActionPanel.Section>
-                    <ActionPanel.Section>
-                      <Action
-                        title="Remove Remap"
-                        icon={Icon.Trash}
-                        style={Action.Style.Destructive}
-                        shortcut={{ modifiers: ["ctrl"], key: "x" }}
-                        onAction={() => handleRemove(entry)}
-                      />
-                    </ActionPanel.Section>
-                  </ActionPanel>
-                }
-              />
-            );
-          })}
-        </List.Section>
-      ))}
+      {currentGroup && renderGroup(currentGroup, `Current App · ${currentGroup.title} (${currentGroup.items.length})`)}
+      {otherGroups.map((group) => renderGroup(group, `${group.title} (${group.items.length})`))}
       {groups.length === 0 && (
         <List.EmptyView
           title="No Remapped Keys"
