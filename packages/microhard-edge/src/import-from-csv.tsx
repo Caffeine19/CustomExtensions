@@ -74,10 +74,9 @@ export default function Command() {
       <Form.Description
         title="Import Workspaces from Sync Dump"
         text={
-          "Select a sync-data-dump-*.csv or .xlsx file exported from edge://sync-internals.\n\n" +
-          "⚠ The default .csv export is always REDACTED on macOS Edge. " +
-          "To get real titles and URLs, open the .csv in WPS or Excel and save it as .xlsx, " +
-          "then pick the .xlsx here."
+          "Select a sync-data-dump-*.csv file exported from edge://sync-internals.\n\n" +
+          "If the import reports REDACTED payloads, re-export the dump with " +
+          '"Include personally identifiable data" enabled to get real titles and URLs.'
         }
       />
       <Form.FilePicker

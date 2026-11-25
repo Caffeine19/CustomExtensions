@@ -1,11 +1,7 @@
 import { readFileSync } from "fs";
-import JSON5 from "json5";
-import * as XLSX from "xlsx";
 
 import { SyncImport, SyncTab, SyncWorkspace } from "../types/sync-workspace";
 import { WorkspaceColor } from "../types/workspace-color";
-
-type RawRow = (string | number | boolean | null | undefined)[];
 
 interface SyncEntity {
   edge_workspace?: {
@@ -32,6 +28,12 @@ interface SyncEntity {
 
 const WORKSPACE_TYPE_LABEL = "Edge Workspace";
 
+/** Entity payloads sit 2 columns after the type column (type, data-type-id, payload...). */
+const PAYLOAD_OFFSET = 2;
+
+/** How many leading fields to inspect when locating the type column. */
+const MAX_META_FIELDS = 32;
+
 /**
  * Map a sync color value to `WorkspaceColor`. Newer `EDGE_CLIENT`-sourced
  * rows store the enum directly (0-13). Older `MIGRATION` rows store an ARGB
@@ -46,81 +48,97 @@ const toWorkspaceColor = (value: string | number | undefined): WorkspaceColor =>
   return WorkspaceColor.Transparent;
 };
 
-/**
- * Join non-empty cells from column index >= `startCol` back into a single
- * string with commas — reversing the fact that Excel/Numbers split embedded
- * JSON on every comma when it wasn't properly quoted.
- */
-const rejoinJsonCells = (row: RawRow, startCol: number): string => {
-  const parts: string[] = [];
-  for (let i = startCol; i < row.length; i++) {
-    const cell = row[i];
-    if (cell === null || cell === undefined || cell === "") continue;
-    parts.push(String(cell));
-  }
-  return parts.join(",");
-};
-
 const parseEntity = (raw: string): SyncEntity | null => {
   const trimmed = raw.trim();
   if (!trimmed || trimmed === "REDACTED") return null;
-  // Excel/xlsx strips quotes around JSON property names when re-parsing the
-  // unescaped CSV, producing things like `{guid:"...",tab:{favicon_url:"..."}}`.
-  // JSON5 accepts unquoted keys so it recovers the original payload.
   try {
-    return JSON5.parse(trimmed) as SyncEntity;
+    return JSON.parse(trimmed) as SyncEntity;
   } catch {
-    try {
-      return JSON.parse(trimmed) as SyncEntity;
-    } catch {
-      return null;
-    }
+    return null;
   }
 };
 
-const findWorkspaceTypeColumn = (rows: RawRow[]): number => {
-  // Find the column that holds the "Edge Workspace" label (usually column L = index 11).
-  for (const row of rows) {
-    for (let i = 0; i < row.length; i++) {
-      if (row[i] === WORKSPACE_TYPE_LABEL) return i;
+/**
+ * Split only the first `fieldCount` comma-separated fields off a raw line and
+ * report where the remaining payload starts. The metadata fields (ids, the
+ * type label) never contain commas, so the payload — unquoted JSON full of
+ * commas — is left untouched.
+ */
+const splitRowPrefix = (line: string, fieldCount: number): { fields: string[]; payloadStart: number } => {
+  const fields: string[] = [];
+  let start = 0;
+  while (fields.length < fieldCount) {
+    const comma = line.indexOf(",", start);
+    if (comma === -1) {
+      fields.push(line.slice(start));
+      return { fields, payloadStart: line.length };
     }
+    fields.push(line.slice(start, comma));
+    start = comma + 1;
   }
-  return -1;
+  return { fields, payloadStart: start };
 };
 
-export interface ParseResult extends Omit<SyncImport, "importedAt" | "source"> {
-  warnings: string[];
+/** Undo RFC4180 quoting for exports that wrote the payload as one quoted cell. */
+const unquoteCell = (raw: string): string => {
+  const value = raw.trim();
+  if (value.length > 1 && value.startsWith('"') && value.endsWith('"')) {
+    return value.slice(1, -1).replace(/""/g, '"');
+  }
+  return value;
+};
+
+/**
+ * Extract entity payloads from a raw sync-data-dump .csv. The dump interleaves
+ * a JSON status report and writes each entity payload as unquoted JSON, so a
+ * real CSV parser splits the payload on every comma and strips its quote
+ * characters (`"guid":"..."` comes back as `guid":"...`). Slice payloads out
+ * of the raw line text instead; entities are serialized compactly, one per
+ * line.
+ */
+const parseTextDump = (buffer: Buffer): string[] => {
+  const lines = buffer
+    .toString("utf8")
+    .replace(/^\uFEFF/, "")
+    .split(/\r\n|\n|\r/);
+
+  let typeCol = -1;
+  for (const line of lines) {
+    if (!line) continue;
+    const { fields } = splitRowPrefix(line, MAX_META_FIELDS);
+    const index = fields.findIndex((field) => field === WORKSPACE_TYPE_LABEL);
+    if (index >= 0 && fields[index + PAYLOAD_OFFSET]) {
+      typeCol = index;
+      break;
+    }
+  }
+  if (typeCol < 0) return [];
+
+  const payloads: string[] = [];
+  for (const line of lines) {
+    if (!line) continue;
+    const { fields, payloadStart } = splitRowPrefix(line, typeCol + PAYLOAD_OFFSET);
+    if (fields[typeCol] !== WORKSPACE_TYPE_LABEL) continue;
+    const payload = unquoteCell(line.slice(payloadStart));
+    if (payload) payloads.push(payload);
+  }
+  return payloads;
+};
+
+interface CollectedEntries {
+  workspaces: SyncWorkspace[];
+  tabs: SyncTab[];
+  totalRows: number;
+  skippedRows: number;
 }
 
-export const parseSyncCsv = (filePath: string): ParseResult => {
-  const buffer = readFileSync(filePath);
-  const workbook = XLSX.read(buffer, { type: "buffer" });
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) {
-    throw new Error("No sheet found in file");
-  }
-  const sheet = workbook.Sheets[sheetName];
-  const rows = XLSX.utils.sheet_to_json<RawRow>(sheet, { header: 1, raw: false, defval: "" });
-
-  const typeCol = findWorkspaceTypeColumn(rows);
-  if (typeCol < 0) {
-    throw new Error(`Could not find a column containing "${WORKSPACE_TYPE_LABEL}". Is this an Edge sync export?`);
-  }
-  // Payload starts 2 columns after the type column (type, data-type-id, payload...).
-  const payloadStartCol = typeCol + 2;
-
+const collectEntries = (payloads: string[]): CollectedEntries => {
   const workspaces: SyncWorkspace[] = [];
   const tabs: SyncTab[] = [];
-  const warnings: string[] = [];
-  let totalRows = 0;
   let skippedRows = 0;
 
-  for (const row of rows) {
-    if (row[typeCol] !== WORKSPACE_TYPE_LABEL) continue;
-    totalRows += 1;
-
-    const joined = rejoinJsonCells(row, payloadStartCol);
-    const entity = parseEntity(joined);
+  for (const raw of payloads) {
+    const entity = parseEntity(raw);
     if (!entity || !entity.edge_workspace) {
       skippedRows += 1;
       continue;
@@ -166,14 +184,36 @@ export const parseSyncCsv = (filePath: string): ParseResult => {
     }
   }
 
-  if (totalRows > 0 && workspaces.length === 0 && tabs.length === 0) {
-    warnings.push(
-      `Found ${totalRows} Edge Workspace rows but no readable payload. ` +
-        `This file is likely a REDACTED export — re-export from edge://sync-internals with "Include personally identifiable data" enabled, and prefer the .xlsx variant.`,
-    );
-  } else if (skippedRows > 0) {
-    warnings.push(`${skippedRows} row(s) skipped due to unparseable payload.`);
+  return { workspaces, tabs, totalRows: payloads.length, skippedRows };
+};
+
+export interface ParseResult extends Omit<SyncImport, "importedAt" | "source"> {
+  warnings: string[];
+}
+
+export const parseSyncCsv = (filePath: string): ParseResult => {
+  const buffer = readFileSync(filePath);
+  const payloads = parseTextDump(buffer);
+  if (payloads.length === 0) {
+    throw new Error(`Could not find a column containing "${WORKSPACE_TYPE_LABEL}". Is this an Edge sync export?`);
   }
 
-  return { workspaces, tabs, totalRows, skippedRows, warnings };
+  const result = collectEntries(payloads);
+  const warnings: string[] = [];
+  if (result.workspaces.length === 0 && result.tabs.length === 0) {
+    warnings.push(
+      `Found ${result.totalRows} Edge Workspace rows but no readable payload. ` +
+        `This file is likely a REDACTED export — re-export from edge://sync-internals with "Include personally identifiable data" enabled.`,
+    );
+  } else if (result.skippedRows > 0) {
+    warnings.push(`${result.skippedRows} row(s) skipped due to unparseable payload.`);
+  }
+
+  return {
+    workspaces: result.workspaces,
+    tabs: result.tabs,
+    totalRows: result.totalRows,
+    skippedRows: result.skippedRows,
+    warnings,
+  };
 };

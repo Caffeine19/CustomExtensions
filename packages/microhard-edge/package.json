@@ -29,7 +29,7 @@
       "name": "import-from-csv",
       "title": "Import Workspaces from Sync Dump",
       "subtitle": "Microsoft Edge",
-      "description": "Import workspaces by parsing a sync-data-dump CSV or XLSX from edge://sync-internals.",
+      "description": "Import workspaces by parsing a sync-data-dump CSV from edge://sync-internals.",
       "mode": "view"
     },
     {
@@ -44,9 +44,7 @@
     "@raycast/api": "^1.98.4",
     "@raycast/utils": "^1.17.0",
     "dayjs": "^1.11.13",
-    "json5": "^2.2.3",
-    "radash": "^12.1.0",
-    "xlsx": "^0.18.5"
+    "radash": "^12.1.0"
   },
   "devDependencies": {
     "@raycast/eslint-config": "^2.0.4",
