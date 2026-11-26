@@ -15,8 +15,9 @@
   "commands": [
     {
       "name": "diagnose",
-      "title": "Diagnose Kerio VPN",
+      "title": "Run Kerio Diagnose",
       "description": "Inspect Kerio status, IPv4 tunnels, O+Connect background service, and recent crashes.",
+      "icon": "diagnose_icon.png",
       "mode": "view"
     },
     {

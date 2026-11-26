@@ -48,7 +48,7 @@ export default function Command() {
           )}
           {report?.oppoRunning && (
             <Action.CopyToClipboard
-              title="Copy O+Connect Stop Command"
+              title="Copy O+Connect Stop Commands"
               content={stopOppoCommand}
             />
           )}

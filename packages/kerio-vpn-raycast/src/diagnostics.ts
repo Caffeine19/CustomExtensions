@@ -8,8 +8,19 @@ import { listServices, statusSubtitle } from "./kerio";
 const exec = promisify(execFile);
 const crashDirectory = "/Library/Logs/DiagnosticReports";
 const oppoService = "system/com.oplus.dsp.core";
-export const stopOppoCommand =
-  "sudo launchctl bootout system/com.oplus.dsp.core";
+const oppoPlist = "/Library/LaunchDaemons/com.oplus.dsp.core.plist";
+export const stopOppoCommand = [
+  `sudo launchctl disable ${oppoService}`,
+  `sudo launchctl bootout ${oppoService}`,
+].join("\n");
+const verifyOppoCommands = [
+  "launchctl print-disabled system | grep -F com.oplus.dsp.core",
+  `launchctl print ${oppoService}`,
+].join("\n");
+const restoreOppoCommands = [
+  `sudo launchctl enable ${oppoService}`,
+  `sudo launchctl bootstrap system ${oppoPlist}`,
+].join("\n");
 
 type Process = { pid: string; path: string };
 type Tunnel = { name: string; addresses: string[]; owners: string[] };
@@ -226,8 +237,12 @@ export async function collectDiagnostics(): Promise<DiagnosticReport> {
     `- Processes found — ${oppoProcesses.length}`,
     ...(oppoRunning
       ? [
-          "To stop the background service, run this command in Terminal with your Mac administrator password.",
+          "To stop the background service now and keep it stopped after restart, run these commands in Terminal with your Mac administrator password. The first saves the disabled state so it survives reboot; the second stops the current instance.",
           `\`\`\`sh\n${stopOppoCommand}\n\`\`\``,
+          "Verify with the first command showing `disabled` and the second reporting that the service cannot be found:",
+          `\`\`\`sh\n${verifyOppoCommands}\n\`\`\``,
+          "Note: an independent login helper `oplus_remote_service` may still appear in the process list. Judge the result by the state of `system/com.oplus.dsp.core`. To restore auto-start and start the service again:",
+          `\`\`\`sh\n${restoreOppoCommands}\n\`\`\``,
         ]
       : []),
     "## Tunnel Interfaces",
