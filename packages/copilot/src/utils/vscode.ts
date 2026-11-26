@@ -1,3 +1,4 @@
+import { existsSync, readdirSync } from "fs";
 import { homedir } from "os";
 import { basename, join } from "path";
 
@@ -20,6 +21,15 @@ export function getCliCommand(): string {
 
 export function getScheme(): "vscode-insiders" | "vscode" {
   return getVariant() === "insiders" ? "vscode-insiders" : "vscode";
+}
+
+/** The Raycast session bridge companion (packages/raycast-session-bridge): reveals already-open chat editors. */
+export function isSessionBridgeInstalled(): boolean {
+  const extensionsDir = join(homedir(), getVariant() === "insiders" ? ".vscode-insiders" : ".vscode", "extensions");
+  return (
+    existsSync(extensionsDir) &&
+    readdirSync(extensionsDir).some((entry) => entry.startsWith("caffeinecat.raycast-session-bridge"))
+  );
 }
 
 /** `~/Library/Application Support/Code - Insiders` (or `Code`) for the given variant. */

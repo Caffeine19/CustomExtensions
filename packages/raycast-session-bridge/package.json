@@ -1,0 +1,26 @@
+{
+  "name": "raycast-session-bridge",
+  "displayName": "Raycast Session Bridge",
+  "description": "Opens Copilot agent sessions from Raycast: reveals an already-open chat editor, otherwise opens the chat in the sidebar.",
+  "publisher": "caffeinecat",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onUri"
+  ],
+  "scripts": {
+    "build": "tsc -p .",
+    "watch": "tsc -w -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/vscode": "^1.100.0",
+    "typescript": "^5.8.2"
+  }
+}
