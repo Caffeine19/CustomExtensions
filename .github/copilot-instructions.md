@@ -2,6 +2,23 @@
 
 When using this instructions, say "⌘ Using copilot-instructions.md" explicitly, this is very very important.
 
+## Session Naming
+
+Every session (chat) **must be named after the workspace node** it discusses — i.e. the `packages/<name>` folder of the extension in focus.
+
+Format: `(<package-name>) <short description>`
+
+Examples:
+
+- Discussing the `endel` package → `(endel) Add study mode icon variants`
+- Discussing the `hammerwm` package → `(hammerwm) Fix space store async bug`
+
+Rules:
+
+- The prefix is the exact package directory name, wrapped in parentheses, followed by a space.
+- Rename the session via `rename_chat` as soon as the target package is clear (early in the conversation), and update it if the discussion switches to a different package.
+- If the work spans the whole monorepo (no single package), use `(monorepo) <description>`.
+
 ## Monorepo Architecture
 
 This is a **pnpm + Turborepo** monorepo of independent Raycast extensions under `packages/`. Each package is a standalone Raycast extension with its own `package.json`, commands, and assets. Extensions are **never shared as npm packages** — they are published individually to the Raycast Store via `npx @raycast/api@latest publish`.
