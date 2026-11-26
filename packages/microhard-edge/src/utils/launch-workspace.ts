@@ -1,5 +1,6 @@
-import { closeMainWindow, popToRoot, showToast, Toast } from "@raycast/api";
+import { closeMainWindow, getPreferenceValues, popToRoot, showToast, Toast } from "@raycast/api";
 
+import { closeExtraNewTab } from "./close-new-tab";
 import { getEdgePath } from "./edgePaths";
 import { promisifyExec } from "./promisifyExec";
 
@@ -21,6 +22,11 @@ export const launchWorkspaceByGuid = async (guid: string, profilePath?: string):
     }
     await closeMainWindow();
     await popToRoot();
+
+    const { closeNewTab } = getPreferenceValues();
+    if (closeNewTab) {
+      await closeExtraNewTab();
+    }
   } catch (error) {
     await showToast({
       style: Toast.Style.Failure,

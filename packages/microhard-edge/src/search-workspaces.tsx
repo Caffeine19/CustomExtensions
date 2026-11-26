@@ -1,13 +1,12 @@
-import { Action, ActionPanel, closeMainWindow, Icon, List, popToRoot, showToast, Toast } from "@raycast/api";
+import { Action, ActionPanel, Icon, List } from "@raycast/api";
 import { useCachedPromise } from "@raycast/utils";
 import { useState } from "react";
 
 import { EdgeProfile } from "./types/edge-profile";
 import { Workspace } from "./types/workspace-cache";
 import { hexMap, WorkspaceColor } from "./types/workspace-color";
-import { getEdgePath } from "./utils/edgePaths";
+import { launchWorkspaceByGuid } from "./utils/launch-workspace";
 import { discoverEdgeProfiles } from "./utils/profile";
-import { promisifyExec } from "./utils/promisifyExec";
 import { readAllWorkspaceCacheFiles } from "./utils/workspace";
 
 export default function Command() {
@@ -38,37 +37,9 @@ export default function Command() {
   const isLoading = profilesLoading || workspacesLoading || isOpenWorkspaceLoading;
 
   const onSelectWorkspace = async (workspace: Workspace) => {
-    const edgePath = getEdgePath();
-    const profileArg =
-      workspace.profilePath && workspace.profilePath !== "Default"
-        ? `--profile-directory="${workspace.profilePath}"`
-        : "";
-
-    const command = `${edgePath} ${profileArg} --launch-workspace="${workspace.id}"`.trim();
-
     setIsOpenWorkspaceLoading(true);
     try {
-      const { stderr } = await promisifyExec(command);
-      if (stderr) {
-        console.error("Error launching workspace:", stderr);
-        await showToast({
-          style: Toast.Style.Failure,
-          title: "Failed to launch workspace",
-          message: stderr,
-        });
-        return;
-      }
-
-      closeMainWindow();
-      popToRoot();
-    } catch (error) {
-      console.error("Failed to launch workspace:", error);
-
-      await showToast({
-        style: Toast.Style.Failure,
-        title: "Failed to launch workspace",
-        message: error instanceof Error ? error.message : "Unknown error occurred",
-      });
+      await launchWorkspaceByGuid(workspace.id, workspace.profilePath);
     } finally {
       setIsOpenWorkspaceLoading(false);
     }

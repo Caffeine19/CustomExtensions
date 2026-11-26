@@ -10,6 +10,17 @@
     "Productivity"
   ],
   "license": "MIT",
+  "preferences": [
+    {
+      "name": "closeNewTab",
+      "title": "Close New Tab",
+      "label": "Close the extra New Tab after launching a workspace",
+      "description": "Microsoft Edge adds a blank New Tab whenever a workspace launches. Automatically close it after the workspace opens.",
+      "type": "checkbox",
+      "required": false,
+      "default": true
+    }
+  ],
   "commands": [
     {
       "name": "search-workspaces",
