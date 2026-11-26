@@ -2,6 +2,7 @@ import { Action, ActionPanel, Color, Icon, List, showToast, Toast } from "@rayca
 import { useCachedState } from "@raycast/utils";
 import { useEffect, useMemo } from "react";
 
+import ImportFromCsv from "./import-from-csv";
 import { SyncImport, SyncTab } from "./types/sync-workspace";
 import { launchWorkspaceByGuid } from "./utils/launch-workspace";
 import { clearSyncImport, loadSyncImport } from "./utils/sync-cache";
@@ -46,7 +47,16 @@ export default function Command() {
         <List.EmptyView
           icon={Icon.Download}
           title="No imported data"
-          description='Run "Import Workspaces from Sync Dump" first.'
+          description="Import a sync-data-dump CSV from edge://sync-internals to get started."
+          actions={
+            <ActionPanel>
+              <Action.Push
+                title="Import Workspaces from Sync Dump"
+                icon={Icon.Download}
+                target={<ImportFromCsv onImported={() => setData(loadSyncImport())} />}
+              />
+            </ActionPanel>
+          }
         />
       </List>
     );

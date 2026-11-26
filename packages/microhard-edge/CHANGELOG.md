@@ -5,6 +5,10 @@
 - Add a "Close New Tab" preference (default on) that closes the blank New Tab Microsoft Edge adds whenever a workspace is launched, including New Tab pages customized by extensions.
 - "Search Workspaces" now launches workspaces through the shared utility, so it honors the preference too.
 
+## [Add Import Action to Empty State] - {PR_MERGE_DATE}
+
+- "Search Imported Workspaces" empty state now has an action that opens the sync dump import form in-place, refreshing the list after import.
+
 ## [Fix Sync Dump Import] - {PR_MERGE_DATE}
 
 - Fix parsing of raw `sync-data-dump-*.csv` exports from edge://sync-internals: embedded JSON payloads were mangled by CSV quote handling and every row was skipped.

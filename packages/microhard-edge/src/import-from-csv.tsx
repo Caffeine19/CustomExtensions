@@ -8,7 +8,12 @@ interface FormValues {
   csvFile: string[];
 }
 
-export default function Command() {
+interface CommandProps {
+  /** Set when pushed from another view: refresh its data instead of popping to root. */
+  onImported?: () => void;
+}
+
+export default function Command({ onImported }: CommandProps) {
   const { pop } = useNavigation();
   const [isLoading, setIsLoading] = useState(false);
   const existing = loadSyncImport();
@@ -49,8 +54,13 @@ export default function Command() {
           result.skippedRows ? ` · ${result.skippedRows} skipped` : ""
         }`,
       });
-      pop();
-      await popToRoot();
+      if (onImported) {
+        onImported();
+        pop();
+      } else {
+        pop();
+        await popToRoot();
+      }
     } catch (error) {
       await showToast({
         style: Toast.Style.Failure,
