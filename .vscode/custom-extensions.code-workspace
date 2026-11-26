@@ -33,6 +33,10 @@
       "path": "../packages/hammerwm",
     },
     {
+      "name": "kerio",
+      "path": "../packages/kerio",
+    },
+    {
       "name": "link-editor",
       "path": "../packages/link-editor",
     },
